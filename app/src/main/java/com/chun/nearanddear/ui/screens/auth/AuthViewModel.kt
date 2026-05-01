@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.chun.nearanddear.domain.auth.LoginErrorMapper
 import com.chun.nearanddear.domain.auth.LoginOutcome
 import com.chun.nearanddear.domain.usecase.auth.LoginUseCase
+import com.chun.nearanddear.domain.usecase.auth.SaveUserIdUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase,
+    private val saveUserIdUseCase: SaveUserIdUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -31,8 +33,10 @@ class AuthViewModel @Inject constructor(
 
             try {
                 when (val outcome = loginUseCase(context)) {
-                    is LoginOutcome.Success ->
+                    is LoginOutcome.Success -> {
+                        saveUserIdUseCase(outcome.user)
                         _uiState.value = AuthUiState(user = outcome.user)
+                    }
 
                     LoginOutcome.Cancelled ->
                         _uiState.value = AuthUiState()
