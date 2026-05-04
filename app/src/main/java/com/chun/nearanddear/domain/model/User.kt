@@ -67,3 +67,18 @@ enum class UserState {
     @SerialName("ANNUAL") ANNUAL,
     @SerialName("NORMAL") NORMAL
 }
+
+@Serializable
+data class FriendModel(
+    val userID: String,
+    val name: String,
+    var friendState: FriendState,
+    val friendAvatarUrl: String
+)
+
+@Serializable
+enum class FriendState {
+    @SerialName("FRIEND") FRIEND,
+    @SerialName("REQUEST") REQUEST,
+    @SerialName("PENDING") PENDING
+}

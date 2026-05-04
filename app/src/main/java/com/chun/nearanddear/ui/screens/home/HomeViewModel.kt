@@ -35,12 +35,15 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         this@HomeViewModel.sessionDataStore.currentUser,
         this@HomeViewModel.sessionDataStore.locationModel,
-        serviceRunningState
-    ) { user, location, isServiceRunning ->
+        serviceRunningState,
+        this@HomeViewModel.sessionDataStore.friendModel
+
+    ) { user, location, isServiceRunning, friendList ->
         HomeUiState(
             currentUser = user,
             location = location,
-            isServiceRunning = isServiceRunning
+            isServiceRunning = isServiceRunning,
+            friendList = friendList
         )
     }.stateIn(
         scope = viewModelScope,
@@ -87,7 +90,8 @@ class HomeViewModel @Inject constructor(
         }.addOnFailureListener { exception ->
             if (exception is ResolvableApiException) {
                 try {
-                    val intentSenderRequest = IntentSenderRequest.Builder(exception.resolution).build()
+                    val intentSenderRequest =
+                        IntentSenderRequest.Builder(exception.resolution).build()
                     resolutionLauncher.launch(intentSenderRequest)
                 } catch (sendEx: IntentSender.SendIntentException) {
                     sendEx.printStackTrace()

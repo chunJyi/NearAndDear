@@ -1,5 +1,6 @@
 package com.chun.nearanddear.data.session
 
+import com.chun.nearanddear.domain.model.FriendModel
 import com.chun.nearanddear.domain.model.Location
 import com.chun.nearanddear.domain.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,5 +39,19 @@ class SessionDataStore @Inject constructor() {
 
     fun clear() {
         _location.value = null
+    }
+
+    private val _friends = MutableStateFlow<List<FriendModel>>(emptyList())
+    val friendModel: StateFlow<List<FriendModel>?> = _friends.asStateFlow()
+
+    val friendsOrNull: List<FriendModel>?
+        get() = _friends.value
+
+    fun setFriend(friends: List<FriendModel>) {
+        _friends.value = friends
+    }
+
+    fun clearFriend() {
+        _friends.value = emptyList()
     }
 }

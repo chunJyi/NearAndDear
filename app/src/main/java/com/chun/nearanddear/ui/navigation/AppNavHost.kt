@@ -46,7 +46,7 @@ fun AppNavHost() {
         }
 
         composable(Routes.Main.HOME) {
-            HomeScreen()
+            HomeScreen(navController = navController)
         }
     }
 
