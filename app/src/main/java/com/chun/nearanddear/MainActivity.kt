@@ -1,36 +1,84 @@
 package com.chun.nearanddear
 
-import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.chun.nearanddear.domain.service.LocationService
+import androidx.activity.result.contract.ActivityResultContracts
 import com.chun.nearanddear.ui.navigation.AppNavHost
+import com.chun.nearanddear.utils.PermissionManager
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    private lateinit var permissionManager: PermissionManager
+    
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        handlePermissionResults()
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            AppNavHost()
+        
+        permissionManager = PermissionManager(this)
+        
+        if (permissionManager.areAllPermissionsGranted()) {
+            setContent {
+                AppNavHost()
+            }
+        } else {
+            requestPermissions()
         }
     }
-
-    /**
-     * Start the [LocationService] in foreground mode.
-     */
-    private fun startLocationService() {
-        val serviceIntent = Intent(this, LocationService::class.java)
-        startForegroundService(serviceIntent)
+    
+    private fun requestPermissions() {
+        val deniedPermissions = permissionManager.getDeniedPermissions()
+        
+        if (deniedPermissions.isNotEmpty()) {
+            permissionLauncher.launch(deniedPermissions.toTypedArray())
+        } else {
+            setContent {
+                AppNavHost()
+            }
+        }
     }
-
-    /**
-     * Stop the [LocationService] if it is running.
-     */
-    private fun stopLocationService() {
-        val serviceIntent = Intent(this, LocationService::class.java)
-        stopService(serviceIntent)
+    
+    private fun handlePermissionResults() {
+        val allGranted = permissionManager.areAllPermissionsGranted()
+        
+        if (allGranted) {
+            setContent {
+                AppNavHost()
+            }
+        } else {
+            val deniedPermissions = permissionManager.getDeniedPermissions().toSet()
+            if (deniedPermissions.isNotEmpty()) {
+                showPermissionDeniedMessage(deniedPermissions)
+            }
+            
+            // Still show the app but with limited functionality
+            setContent {
+                AppNavHost()
+            }
+        }
+    }
+    
+    private fun showPermissionDeniedMessage(deniedPermissions: Set<String>) {
+        val message = when {
+            deniedPermissions.contains("android.permission.ACCESS_FINE_LOCATION") ||
+            deniedPermissions.contains("android.permission.ACCESS_COARSE_LOCATION") -> 
+                "Location permissions are required for the app to function properly."
+            
+            deniedPermissions.contains("android.permission.POST_NOTIFICATIONS") -> 
+                "Notification permission is required for location updates."
+            
+            else -> "Some permissions were denied. App functionality may be limited."
+        }
+        
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
 }

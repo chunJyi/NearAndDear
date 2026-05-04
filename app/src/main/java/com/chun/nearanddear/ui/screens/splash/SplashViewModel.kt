@@ -1,10 +1,20 @@
 package com.chun.nearanddear.ui.screens.splash
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chun.nearanddear.data.session.SessionDataStore
 import com.chun.nearanddear.domain.usecase.auth.GetUserIdUseCase
 import com.chun.nearanddear.domain.usecase.auth.GetUserFromSupabaseUseCase
+import com.chun.nearanddear.utils.PermissionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +31,12 @@ class SplashViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<SplashUiState>(SplashUiState.Loading)
     val uiState: StateFlow<SplashUiState> = _uiState
+
+    private val _showErrorDialog = MutableStateFlow(false)
+    val showErrorDialog: StateFlow<Boolean> = _showErrorDialog
+
+    private val _permissionsGranted = MutableStateFlow(false)
+    val permissionsGranted: StateFlow<Boolean> = _permissionsGranted
 
     init {
         startSplashSequence()
@@ -61,6 +77,27 @@ class SplashViewModel @Inject constructor(
                     )
                 }
             )
+        }
+    }
+
+    fun onPermissionResult(permissions: Map<String, Boolean>) {
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+            _permissionsGranted.value = true
+            onPermissionsGranted()
+        } else {
+            _showErrorDialog.value = true
+        }
+    }
+    
+    fun dismissErrorDialog() {
+        _showErrorDialog.value = false
+    }
+
+    private fun onPermissionsGranted() {
+        // Navigate to next screen after permissions are granted
+        viewModelScope.launch {
+            _uiState.value = SplashUiState.NavigateToHome
         }
     }
 }
