@@ -22,10 +22,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NearAndDear"
         tools:targetApi="31">
-<!--        <meta-data-->
-<!--            android:name="com.google.android.geo.API_KEY"-->
-<!--            android:value="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" />-->
-        <!-- Launcher activity -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBZTg4BTUsaENCpjxe0aNxwU8ZwFWYke6g" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

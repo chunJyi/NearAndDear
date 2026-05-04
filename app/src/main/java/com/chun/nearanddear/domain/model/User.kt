@@ -67,4 +67,3 @@ enum class UserState {
     @SerialName("ANNUAL") ANNUAL,
     @SerialName("NORMAL") NORMAL
 }
-

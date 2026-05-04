@@ -54,6 +54,7 @@ android {
 
 dependencies {
 
+    implementation(libs.androidx.material3)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
@@ -73,7 +74,6 @@ dependencies {
     // Google Sign-In (use version catalog)
     implementation(libs.google.play.services.auth)
     implementation("androidx.credentials:credentials:1.5.0")
-    implementation("com.google.android.gms:play-services-auth:21.0.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
@@ -93,8 +93,11 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    implementation("com.airbnb.android:lottie-compose:6.4.0")
-
-
+    implementation("com.google.maps.android:maps-compose:4.4.1")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Accompanist for pager and permissions
+    implementation("com.google.accompanist:accompanist-pager:0.31.3-beta")
+    implementation("com.google.accompanist:accompanist-permissions:0.31.3-beta")
 
 }

@@ -1,14 +1,12 @@
 package com.chun.nearanddear.data.remote.supabase
 
 import android.util.Log
+import com.chun.nearanddear.domain.model.Location
 import com.chun.nearanddear.domain.model.User
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import okio.utf8Size
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,28 +32,22 @@ class SupabaseAuthDataSource @Inject constructor(
         Log.e(TAG, "Sign-in failed: ${e.message}", e)
     }
 
-    fun getCurrentUser(): User? {
-        val user = client.auth.currentSessionOrNull()?.user ?: return null
-        val userId = user.id
-        val email = user.email ?: "No Email"
-        val name = user.userMetadata?.get("name")?.toString()?.trim('"') ?: "No Name"
-        val avatarUrl = user.userMetadata?.get("avatar_url")?.toString()?.trim('"') ?: ""
-        val now = Instant.now().toString()
-        val oneYear =
-            LocalDateTime.now().plus(1, ChronoUnit.YEARS).toInstant(ZoneOffset.UTC).toString()
-
-        return User(
-            userID = userId,
-            name = name,
-            email = email,
-            phone = "No Phone",
-            avatarUrl = avatarUrl,
-            updatedAt = now,
-            createdAt = now,
-            startDate = now,
-            endDate = oneYear
-        )
-    }
+    suspend fun updateUserLocation(location: Location): Result<Unit> =
+        runCatching {
+            client
+                .from("location")
+                .update(
+                    mapOf(
+                        "latitude" to location.latitude,
+                        "longitude" to location.longitude,
+                        "updated_at" to Instant.now().toString()
+                    )
+                ) {
+                    filter {
+                        eq("user_id", location.userID)
+                    }
+                }
+        }
 
     private companion object {
         private const val TAG = "SupabaseAuthDataSource"

@@ -2,6 +2,7 @@ package com.chun.nearanddear.ui.navigation
 
 object Routes {
     object Auth {
+        const val SPLASH = "splash"
         const val LOGIN = "login"
     }
 
@@ -9,4 +10,3 @@ object Routes {
         const val HOME = "home"
     }
 }
-

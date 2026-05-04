@@ -4,7 +4,6 @@ import android.content.Context
 import com.chun.nearanddear.data.remote.supabase.SupabaseAuthDataSource
 import com.chun.nearanddear.domain.auth.LoginErrorMapper
 import com.chun.nearanddear.domain.auth.LoginOutcome
-import com.chun.nearanddear.domain.model.User
 import com.chun.nearanddear.domain.repository.AuthRepository
 import com.chun.nearanddear.domain.service.GoogleAuthService
 import javax.inject.Inject
@@ -29,5 +28,4 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getCurrentUser(): User? = supabaseDataSource.getCurrentUser()
 }
