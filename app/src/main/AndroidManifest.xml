@@ -33,6 +33,9 @@
         </activity>
 
 
+        <service android:name=".domain.service.LocationService"
+            android:foregroundServiceType="location" />
+
     </application>
 
 </manifest>

@@ -1,6 +1,7 @@
 package com.chun.nearanddear.ui.screens.home
 
 import android.content.Context
+import android.content.Intent
 import android.content.IntentSender
 import android.location.LocationManager
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -9,6 +10,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chun.nearanddear.data.session.SessionDataStore
+import com.chun.nearanddear.domain.service.LocationService
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
@@ -46,7 +48,17 @@ class HomeViewModel @Inject constructor(
         initialValue = HomeUiState()
     )
 
-    fun toggleService() {
+    fun toggleService(context: Context) {
+        val currentState = serviceRunningState.value
+        if (currentState) {
+            // Stop service
+            val serviceIntent = Intent(context, LocationService::class.java)
+            context.stopService(serviceIntent)
+        } else {
+            // Start service
+            val serviceIntent = Intent(context, LocationService::class.java)
+            context.startForegroundService(serviceIntent)
+        }
         serviceRunningState.update { !it }
     }
 

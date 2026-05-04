@@ -42,6 +42,7 @@ import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,12 +68,15 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context: Context = LocalContext.current
+
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -86,12 +91,6 @@ fun HomeScreen(
     }
 
     LaunchedEffect(uiState.isServiceRunning) {
-        // Start LocationService only on first load (when service is not running)
-        if (!uiState.isServiceRunning) {
-            val serviceIntent = Intent(context, LocationService::class.java)
-            context.startForegroundService(serviceIntent)
-        }
-        
         if (!viewModel.isLocationEnabled(context)) {
             val result = snackbarHostState.showSnackbar(
                 message = "GPS is turned off. Tap to enable.",
@@ -100,7 +99,7 @@ fun HomeScreen(
             )
             if (result == SnackbarResult.ActionPerformed) {
                 // TODO: Implement GPS enable logic
-                viewModel.requestEnableGPS(context,resolutionLauncher);
+                viewModel.requestEnableGPS(context, resolutionLauncher);
                 // This could open location settings or use a resolution launcher
             }
         }
@@ -109,11 +108,13 @@ fun HomeScreen(
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
+
         },
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             AppBar(
                 isServiceRunning = uiState.isServiceRunning,
-                onToggleService = viewModel::toggleService
+                onToggleService = { viewModel.toggleService(context) }
             )
         }
     ) { paddingValues ->
@@ -333,4 +334,3 @@ fun LocationMapCard(location: Location?, name: String? = null) {
         }
     }
 }
-

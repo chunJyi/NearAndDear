@@ -17,12 +17,14 @@ import com.chun.nearanddear.data.remote.supabase.SupabaseAuthDataSource
 import com.chun.nearanddear.data.session.SessionDataStore
 import com.chun.nearanddear.domain.model.Location
 import com.google.android.gms.location.*
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.chun.nearanddear.R
 import jakarta.inject.Inject
 
+@AndroidEntryPoint
 class LocationService : Service() {
 
     @Inject

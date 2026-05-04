@@ -94,8 +94,7 @@ fun SplashScreen(
             )
 
             // Show loading indicator or error/retry UI
-        val currentState = uiState
-        when (currentState) {
+            when (val currentState = uiState) {
             is SplashUiState.Loading -> {
                 CircularProgressIndicator(
                     color = Color(0xFF1976D2),
