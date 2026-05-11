@@ -1,9 +1,12 @@
 package com.chun.nearanddear.ui.screens.home
 
+import android.R.attr.title
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Geocoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,17 +57,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -80,6 +87,8 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -240,12 +249,28 @@ fun UserLocationInfoCard(user: User?, location: Location?) {
         shape = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            // Background Image
+            Image(
+                painter = painterResource(R.drawable.user_card), // Replace with your image resource
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            
+            // Content Overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            ) {
             // User Data Header
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
@@ -270,36 +295,50 @@ fun UserLocationInfoCard(user: User?, location: Location?) {
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    user?.email?.let {
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (true) Color(0xFF2ECC71) else Color.Gray
+                                )
+                        )
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = if (true) "Live location" else "Offline",
+                            fontSize = 15.sp,
+                            color = Color.Gray
                         )
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Location Footer
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(8.dp),
-                contentAlignment = Alignment.CenterStart
+            Row(
+                Modifier.fillMaxWidth(0.6f),
             ) {
                 Text(
-                    text = location?.let { "📍 ${it.latitude}, ${it.longitude}" }
-                        ?: "📍 Location unavailable",
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    text = "📍",
+                    fontSize = 20.sp,
+                    color = Color.Gray
+                )
+                Spacer(Modifier.width(6.dp))
+                UserAddress(
+                    LocalContext.current,
+                    location?.latitude,
+                    location?.longitude,
+                    fontSize = 15.sp,
+                    color = Color.Black
                 )
             }
-        }
-    }
+            Spacer(Modifier.fillMaxWidth(0.4f))
+
+            } // Close Column
+        } // Close Box
+    } // Close Card
 }
 
 @Composable
@@ -328,8 +367,8 @@ fun UserLocationMapCard(location: Location?, name: String? = null) {
 
 @Composable
 fun LocationMapCard(location: Location?, name: String? = null) {
-    val lat = location?.latitude?.toDoubleOrNull() ?: 16.778171
-    val lon = location?.longitude?.toDoubleOrNull() ?: 96.138039
+    val lat = location?.latitude ?: 16.778171
+    val lon = location?.longitude ?: 96.138039
     val userLatLng = LatLng(lat, lon)
 
     val cameraPositionState = rememberCameraPositionState {
@@ -567,3 +606,46 @@ private fun getImageAsync(avatarUrl: String?) {
         }
     }
 }
+
+
+@Composable
+fun UserAddress(
+    context: Context,
+    latitude: Double?,
+    longitude: Double?,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    color: Color = Color.Unspecified
+) {
+    var address by remember { mutableStateOf("Loading...") }
+
+    LaunchedEffect(latitude, longitude) {
+        if (latitude == null || longitude == null) {
+            address = "Location not available"
+            return@LaunchedEffect
+        }
+
+        try {
+            val geocoder = Geocoder(context)
+            val addressList = withContext(Dispatchers.IO) {
+                geocoder.getFromLocation(latitude, longitude, 1)
+            }
+            address = if (!addressList.isNullOrEmpty()) {
+                val addressObj = addressList[0]
+                "${addressObj.getAddressLine(0)}, ${addressObj.adminArea}"
+            } else {
+                " Address not found"
+            }
+        } catch (e: Exception) {
+            address = "Error: ${e.localizedMessage}"
+        }
+    }
+    Text(
+        text = " $address",
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 3,
+        fontWeight = FontWeight.Medium,
+        fontSize = fontSize,
+        color = color
+    )
+}
+

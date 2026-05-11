@@ -12,6 +12,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.chun.nearanddear.domain.auth.LoginErrorMapper
 import com.chun.nearanddear.domain.auth.LoginOutcome
 import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.domain.model.UserState
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -92,6 +93,7 @@ class GoogleAuthService @Inject constructor(
             val userId = user.id
             val email = user.email ?: "No Email"
             val phone = "No Phone"
+            val userState = UserState.NORMAL;
             val name = user.userMetadata?.get("name")?.toString()?.trim('"') ?: "No Name"
             val avatarUrl = user.userMetadata?.get("avatar_url")?.toString()?.trim('"') ?: ""
             val updatedAt = Instant.now().toString()
@@ -105,6 +107,7 @@ class GoogleAuthService @Inject constructor(
                 name = name.toString(),
                 email = email,
                 phone = phone,
+                userState = userState,
                 avatarUrl = avatarUrl.toString(),
                 updatedAt = updatedAt,
                 createdAt = updatedAt,

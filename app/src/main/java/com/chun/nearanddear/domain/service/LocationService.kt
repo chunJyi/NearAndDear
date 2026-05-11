@@ -23,13 +23,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.chun.nearanddear.R
 import jakarta.inject.Inject
+import java.time.Instant
 
 @AndroidEntryPoint
 class LocationService : Service() {
 
     @Inject
     lateinit var sessionDataStore: SessionDataStore
-    
+
     @Inject
     lateinit var supabaseAuthDataSource: SupabaseAuthDataSource
 
@@ -52,14 +53,15 @@ class LocationService : Service() {
             override fun onLocationResult(result: LocationResult) {
                 super.onLocationResult(result)
                 for (location in result.locations) {
-                    val lat = location.latitude.toString()
-                    val lng = location.longitude.toString()
+                    val lat = location.latitude
+                    val lng = location.longitude
                     Log.d("LocationService", "Lat: $lat, Lng: $lng")
                     // Update location in SessionDataStore
                     val domainLocation = Location(
                         userID = sessionDataStore.userOrNull?.userID ?: "",
                         latitude = lat,
-                        longitude = lng
+                        longitude = lng,
+                        updatedAt = Instant.now().toString()
                     )
                     sessionDataStore.setLocation(domainLocation)
                     CoroutineScope(Dispatchers.IO).launch {
@@ -90,8 +92,8 @@ class LocationService : Service() {
     }
 
     suspend fun pushUserLocation(
-        latitude: String,
-        longitude: String
+        latitude: Double,
+        longitude: Double
     ): Result<Unit> {
         val userId = sessionDataStore.userOrNull?.userID
             ?: return Result.failure(IllegalStateException("User not logged in"))
@@ -99,7 +101,8 @@ class LocationService : Service() {
         val location = Location(
             userID = userId,
             latitude = latitude,
-            longitude = longitude
+            longitude = longitude,
+            updatedAt = Instant.now().toString()
         )
 
         return runCatching {
@@ -163,7 +166,7 @@ class LocationService : Service() {
             .build()
     }
 
-    private fun updateNotification(lat: String, lng: String) {
+    private fun updateNotification(lat: Double, lng: Double) {
         val updatedNotification = createNotification("Lat: $lat, Lng: $lng")
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, updatedNotification)
