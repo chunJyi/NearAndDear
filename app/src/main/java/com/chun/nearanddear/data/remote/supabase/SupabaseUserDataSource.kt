@@ -8,12 +8,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class   SupabaseUserDataSource @Inject constructor(
+class SupabaseUserDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {
     suspend fun getUserById(userId: String): Result<User> = runCatching {
-        val users = client.from("loginUser").select {
-            filter { eq("userID", userId) }
+        val users = client.from("users").select {
+            filter { eq("id", userId) }
         }.decodeList<User>()
 
         if (users.isNotEmpty()) {

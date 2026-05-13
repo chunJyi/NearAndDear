@@ -17,22 +17,22 @@ class SupabaseAuthDataSource @Inject constructor(
 ) {
 
     suspend fun signInWithGoogleIdToken(userToInsert: User): Result<User> = runCatching {
-        val existingUsers = client.from("loginUser").select {
-            filter { eq("userID", userToInsert.userID) }
+        val existingUsers = client.from("users").select {
+            filter { eq("id", userToInsert.userID) }
         }.decodeList<User>()
 
         if (existingUsers.isEmpty()) {
-            client.from("loginUser").insert(userToInsert);
-            insertUserLocation(userToInsert.userID);
+            client.from("users").insert(userToInsert)
+            insertUserLocation(userToInsert.userID).getOrThrow()
             Log.d(TAG, "User inserted successfully: ${userToInsert.userID}")
             userToInsert
         } else {
-            val existingUserLocation = client.from("location").select {
-                filter { eq("userID", userToInsert.userID) }
+            val existingUserLocation = client.from("user_location").select {
+                filter { eq("user_id", userToInsert.userID) }
             }.decodeList<Location>()
 
             if (existingUserLocation.isEmpty()) {
-                insertUserLocation(userToInsert.userID);
+                insertUserLocation(userToInsert.userID).getOrThrow()
             }
 
             Log.d(TAG, "User already exists: ${userToInsert.userID}")
@@ -49,10 +49,10 @@ class SupabaseAuthDataSource @Inject constructor(
             longitude = 0.0,
             updatedAt = Instant.now().toString()
         )
-        client.from("location").insert(location)
+        client.from("user_location").insert(location)
     }
 
-    suspend fun updateUserLocation(location: Location): Result<Int> =
+    suspend fun updateUserLocation(location: Location): Result<Unit> =
         runCatching {
             Log.d(TAG, "Updating location for user ${location.userID}: lat=${location.latitude}, lng=${location.longitude}")
 
@@ -61,15 +61,14 @@ class SupabaseAuthDataSource @Inject constructor(
                 put("longitude", location.longitude)
                 put("updated_at", Instant.now().toString())
             }
-            val response = client
-                .from("location")
+            client
+                .from("user_location")
                 .update(body
                     )
                  {
-                    filter { eq("userID", location.userID) }
+                    filter { eq("user_id", location.userID) }
                 }
-
-            Log.d(TAG, "Location update response: $response")
+            Log.d(TAG, "Location update completed for user ${location.userID}")
 
         }.onFailure { e ->
             Log.e(TAG, "Failed to update user location: ${e.message}", e)
