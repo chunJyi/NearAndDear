@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class   SupabaseUserDataSource @Inject constructor(
+class SupabaseUserDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {
     suspend fun getUserById(userId: String): Result<User> = runCatching {
