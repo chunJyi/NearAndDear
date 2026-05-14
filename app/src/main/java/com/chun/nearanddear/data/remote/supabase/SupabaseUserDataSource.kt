@@ -2,9 +2,14 @@ package com.chun.nearanddear.data.remote.supabase
 
 import android.util.Log
 import com.chun.nearanddear.domain.model.Friend
+import com.chun.nearanddear.domain.model.FriendModel
+import com.chun.nearanddear.domain.model.FriendRequestItem
+import com.chun.nearanddear.domain.model.FriendState
 import com.chun.nearanddear.domain.model.User
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -75,6 +80,129 @@ class SupabaseUserDataSource @Inject constructor(
         Log.d(TAG, "Friend request sent from $userId to $friendId")
     }.onFailure { e ->
         Log.e(TAG, "Failed to send friend request: ${e.message}", e)
+    }
+
+    suspend fun getUsersByIds(ids: List<String>): Result<List<User>> = runCatching {
+        val distinct = ids.distinct().filter { it.isNotBlank() }
+        if (distinct.isEmpty()) return@runCatching emptyList()
+        client.from("users").select {
+            filter {
+                isIn("id", distinct)
+            }
+        }.decodeList<User>()
+    }.onFailure { e ->
+        Log.e(TAG, "Failed to load users by ids: ${e.message}", e)
+    }
+
+    suspend fun getAcceptedFriends(userId: String): Result<List<FriendModel>> = runCatching {
+        val rows = client.from("friends").select {
+            filter {
+                or {
+                    and {
+                        eq("user_id", userId)
+                        eq("status", "FRIEND")
+                    }
+                    and {
+                        eq("friend_id", userId)
+                        eq("status", "FRIEND")
+                    }
+                }
+            }
+        }.decodeList<Friend>()
+
+        val otherIds = rows.map { row ->
+            if (row.userId == userId) row.friendId else row.userId
+        }.distinct()
+
+        val users = getUsersByIds(otherIds).getOrThrow().associateBy { it.id }
+
+        rows.mapNotNull { row ->
+            val otherId = if (row.userId == userId) row.friendId else row.userId
+            val u = users[otherId] ?: return@mapNotNull null
+            FriendModel(
+                userID = u.id,
+                name = u.name,
+                friendState = FriendState.FRIEND,
+                friendAvatarUrl = u.avatarUrl.orEmpty()
+            )
+        }
+    }.onFailure { e ->
+        Log.e(TAG, "Failed to load accepted friends: ${e.message}", e)
+    }
+
+    suspend fun getIncomingPendingFriendRequests(currentUserId: String): Result<List<FriendRequestItem>> =
+        runCatching {
+            val rows = client.from("friends").select {
+                filter {
+                    eq("friend_id", currentUserId)
+                    eq("status", "PENDING")
+                }
+            }.decodeList<Friend>()
+
+            val requesterIds = rows.map { it.userId }.distinct()
+            val users = getUsersByIds(requesterIds).getOrThrow().associateBy { it.id }
+
+            rows.mapNotNull { row ->
+                val relationshipId = row.id ?: return@mapNotNull null
+                val u = users[row.userId] ?: return@mapNotNull null
+                FriendRequestItem(
+                    relationshipId = relationshipId,
+                    counterpartyId = u.id,
+                    counterpartyName = u.name,
+                    counterpartyEmail = u.email,
+                    counterpartyAvatarUrl = u.avatarUrl
+                )
+            }
+        }.onFailure { e ->
+            Log.e(TAG, "Failed to load incoming friend requests: ${e.message}", e)
+        }
+
+    suspend fun getOutgoingPendingFriendRequests(currentUserId: String): Result<List<FriendRequestItem>> =
+        runCatching {
+            val rows = client.from("friends").select {
+                filter {
+                    eq("user_id", currentUserId)
+                    eq("status", "PENDING")
+                }
+            }.decodeList<Friend>()
+
+            val friendIds = rows.map { it.friendId }.distinct()
+            val users = getUsersByIds(friendIds).getOrThrow().associateBy { it.id }
+
+            rows.mapNotNull { row ->
+                val relationshipId = row.id ?: return@mapNotNull null
+                val u = users[row.friendId] ?: return@mapNotNull null
+                FriendRequestItem(
+                    relationshipId = relationshipId,
+                    counterpartyId = u.id,
+                    counterpartyName = u.name,
+                    counterpartyEmail = u.email,
+                    counterpartyAvatarUrl = u.avatarUrl
+                )
+            }
+        }.onFailure { e ->
+            Log.e(TAG, "Failed to load outgoing pending friend requests: ${e.message}", e)
+        }
+
+    suspend fun acceptFriendRequest(relationshipId: String): Result<Int> = runCatching {
+        val body = buildJsonObject {
+            put("status", "FRIEND")
+        }
+        client.from("friends").update(body) {
+            filter { eq("id", relationshipId) }
+        }
+        Log.d(TAG, "Friend request accepted: $relationshipId")
+    }.onFailure { e ->
+        Log.e(TAG, "Failed to accept friend request: ${e.message}", e)
+    }
+
+    suspend fun deleteFriendRelationship(relationshipId: String): Result<Int> = runCatching {
+        client.from("friends").delete {
+            filter { eq("id", relationshipId) }
+        }
+        Log.d(TAG, "Friend relationship deleted: $relationshipId")
+    }.onFailure { e ->
+        Log.e(TAG, "Failed to delete friend relationship: ${e.message}", e)
     }
 
     suspend fun checkFriendRequestStatus(userId: String, friendId: String): Result<String?> = runCatching {

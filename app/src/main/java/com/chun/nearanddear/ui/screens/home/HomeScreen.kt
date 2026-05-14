@@ -1,6 +1,5 @@
 package com.chun.nearanddear.ui.screens.home
 
-import android.R.attr.title
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
@@ -31,6 +30,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +54,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +63,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,9 +78,12 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.chun.nearanddear.R
 import com.chun.nearanddear.domain.model.FriendModel
+import com.chun.nearanddear.domain.model.FriendRequestItem
 import com.chun.nearanddear.domain.model.UserLocation
 import com.chun.nearanddear.domain.model.User
 import com.chun.nearanddear.ui.navigation.Routes
@@ -130,6 +136,17 @@ fun HomeScreen(
         }
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshFriendRequests()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -152,14 +169,20 @@ fun HomeScreen(
             CarouselExampleMultiBrowse(uiState.currentUser, uiState.location)
 
             FriendCard(
-                uiState.friendList,
-                navController,
-                context,
-                tabs,
-                selectedTab.intValue
-            ) {
-                selectedTab.intValue = it
-            }
+                friendList = uiState.friendList,
+                incomingFriendRequests = uiState.incomingFriendRequests,
+                outgoingFriendRequests = uiState.outgoingFriendRequests,
+                isFriendDataLoading = uiState.isFriendDataLoading,
+                friendRequestsError = uiState.friendRequestsError,
+                onAcceptIncomingRequest = viewModel::acceptIncomingFriendRequest,
+                onDeclineIncomingRequest = viewModel::declineIncomingFriendRequest,
+                onCancelOutgoingRequest = viewModel::cancelOutgoingFriendRequest,
+                onDismissFriendRequestError = viewModel::clearFriendRequestsError,
+                navController = navController,
+                tabs = tabs,
+                selectedTabIndex = selectedTab.intValue,
+                onTabSelected = { selectedTab.intValue = it }
+            )
         }
     }
 }
@@ -446,22 +469,27 @@ private fun FriendsTabs(
 
 
 /**
- * FriendCard is a composable function that displays a list of friends, requests and pending friends.
- * It also displays a tab row with three tabs: Friends, Requests and Pending.
+ * FriendCard shows friends, incoming requests (Request tab), and outgoing pending (Pending tab).
  *
- * @param navController the NavController used to navigate to the details screen
- * @param context the Context used to display a toast message
- * @param tabs a list of strings containing the titles of the tabs
- * @param selectedIndex the index of the selected tab
- * @param onTabSelected a lambda function that is called when a tab is selected
+ * @param navController used to open the full friends screen from the Friends tab
+ * @param tabs tab titles shown in the tab row
+ * @param selectedTabIndex selected tab index
+ * @param onTabSelected called when the user selects a tab
  */
 @Composable
 private fun FriendCard(
     friendList: List<FriendModel>?,
+    incomingFriendRequests: List<FriendRequestItem>,
+    outgoingFriendRequests: List<FriendRequestItem>,
+    isFriendDataLoading: Boolean,
+    friendRequestsError: String?,
+    onAcceptIncomingRequest: (String) -> Unit,
+    onDeclineIncomingRequest: (String) -> Unit,
+    onCancelOutgoingRequest: (String) -> Unit,
+    onDismissFriendRequestError: () -> Unit,
     navController: NavController,
-    context: Context,
     tabs: List<String>,
-    selectedIndex: Int,
+    selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit
 ) {
     Card(
@@ -475,11 +503,11 @@ private fun FriendCard(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            FriendsTabs(tabs, selectedIndex, onTabSelected)
+            FriendsTabs(tabs, selectedTabIndex, onTabSelected)
             Spacer(Modifier.height(8.dp))
 
             // View All Friends Button
-            if (selectedIndex == 0) {
+            if (selectedTabIndex == 0) {
                 Button(
                     onClick = { navController.navigate(Routes.Main.FRIENDS) },
                     modifier = Modifier
@@ -494,13 +522,220 @@ private fun FriendCard(
                 }
             }
 
-//            FriendListHeader(navController, tabs[selectedIndex], context)
             Spacer(Modifier.height(8.dp))
-            when (selectedIndex) {
+            when (selectedTabIndex) {
                 0 -> FriendList(navController, friendList)
-                1 -> Text("Friend requests coming soon", modifier = Modifier.padding(16.dp))
-                2 -> Text("Pending friends coming soon", modifier = Modifier.padding(16.dp))
+                1 -> FriendRequestTabContent(
+                    isLoading = isFriendDataLoading,
+                    errorMessage = friendRequestsError,
+                    requests = incomingFriendRequests,
+                    onDismissError = onDismissFriendRequestError,
+                    onAccept = onAcceptIncomingRequest,
+                    onDecline = onDeclineIncomingRequest,
+                    emptyMessage = "No friend requests"
+                )
+
+                2 -> FriendPendingTabContent(
+                    isLoading = isFriendDataLoading,
+                    errorMessage = friendRequestsError,
+                    pending = outgoingFriendRequests,
+                    onDismissError = onDismissFriendRequestError,
+                    onCancel = onCancelOutgoingRequest,
+                    emptyMessage = "No pending requests"
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun FriendRequestTabContent(
+    isLoading: Boolean,
+    errorMessage: String?,
+    requests: List<FriendRequestItem>,
+    onDismissError: () -> Unit,
+    onAccept: (String) -> Unit,
+    onDecline: (String) -> Unit,
+    emptyMessage: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 200.dp, max = 320.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = Color(0xFFB91C1C),
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDismissError() }
+                        .padding(bottom = 8.dp)
+                )
+            }
+            if (requests.isEmpty()) {
+                Text(
+                    text = emptyMessage,
+                    modifier = Modifier.padding(16.dp),
+                    color = Color.Gray
+                )
+            } else {
+                requests.forEach { item ->
+                    IncomingFriendRequestRow(
+                        item = item,
+                        onAccept = { onAccept(item.relationshipId) },
+                        onDecline = { onDecline(item.relationshipId) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FriendPendingTabContent(
+    isLoading: Boolean,
+    errorMessage: String?,
+    pending: List<FriendRequestItem>,
+    onDismissError: () -> Unit,
+    onCancel: (String) -> Unit,
+    emptyMessage: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 200.dp, max = 320.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = Color(0xFFB91C1C),
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDismissError() }
+                        .padding(bottom = 8.dp)
+                )
+            }
+            if (pending.isEmpty()) {
+                Text(
+                    text = emptyMessage,
+                    modifier = Modifier.padding(16.dp),
+                    color = Color.Gray
+                )
+            } else {
+                pending.forEach { item ->
+                    OutgoingFriendPendingRow(
+                        item = item,
+                        onCancel = { onCancel(item.relationshipId) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IncomingFriendRequestRow(
+    item: FriendRequestItem,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            getImageAsync(item.counterpartyAvatarUrl)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.counterpartyName, fontWeight = FontWeight.Bold)
+                Text(
+                    item.counterpartyEmail,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onAccept,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2563EB),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Accept")
+            }
+            OutlinedButton(
+                onClick = onDecline,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Decline")
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutgoingFriendPendingRow(
+    item: FriendRequestItem,
+    onCancel: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            getImageAsync(item.counterpartyAvatarUrl)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.counterpartyName, fontWeight = FontWeight.Bold)
+                Text(
+                    "Waiting for response",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Cancel request")
         }
     }
 }
@@ -575,19 +810,6 @@ fun formatUserId(userId: String): String {
     } else {
         "${userId.take(5)}*****${userId.takeLast(5)}"
     }
-}
-
-/**
- * Checks if a user with the given ID is included in the friend list.
- *
- * @param friendList the list of friends to check against
- * @param userIdToCheck the user ID to find in the friend list
- * @return true if the friend list contains the user with the specified ID, false otherwise
- */
-private fun isIncludeFriend(
-    friendList: List<FriendModel>, userIdToCheck: String
-): Boolean {
-    return friendList.any { userIdToCheck == it.userID }
 }
 
 /**
