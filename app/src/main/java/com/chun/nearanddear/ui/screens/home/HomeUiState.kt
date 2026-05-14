@@ -11,6 +11,9 @@ data class HomeUiState(
     val isServiceRunning: Boolean = false,
     val friendList: List<FriendModel>? = emptyList(),
 
+    val searchResults: List<User>? = null,
+    val isSearching: Boolean = false,
+
     val tabs: List<String> = emptyList(),
     val selectedTab: Int = 0
 )

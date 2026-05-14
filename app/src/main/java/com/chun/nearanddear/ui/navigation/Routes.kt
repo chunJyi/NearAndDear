@@ -8,5 +8,7 @@ object Routes {
 
     object Main {
         const val HOME = "home"
+        const val FRIENDS = "friends"
+        const val FRIEND_DETAIL = "friend_detail/{userId}"
     }
 }

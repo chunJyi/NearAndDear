@@ -9,7 +9,11 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.chun.nearanddear.data.remote.supabase.SupabaseUserDataSource
 import com.chun.nearanddear.data.session.SessionDataStore
+import com.chun.nearanddear.domain.model.FriendModel
+import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.domain.model.UserLocation
 import com.chun.nearanddear.domain.service.LocationService
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
@@ -23,27 +27,42 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val sessionDataStore: SessionDataStore,
+    private val supabaseUserDataSource: SupabaseUserDataSource
 ) : ViewModel() {
 
     private val serviceRunningState = MutableStateFlow(false)
+    private val searchResultsState = MutableStateFlow<List<User>?>(null)
+    private val isSearchingState = MutableStateFlow(false)
 
     val uiState: StateFlow<HomeUiState> = combine(
         this@HomeViewModel.sessionDataStore.currentUser,
         this@HomeViewModel.sessionDataStore.locationModel,
         serviceRunningState,
-        this@HomeViewModel.sessionDataStore.friendModel
+        this@HomeViewModel.sessionDataStore.friendModel,
+        searchResultsState,
+        isSearchingState
 
-    ) { user, location, isServiceRunning, friendList ->
+    ) { values: Array<Any?> ->
+        val user = values[0] as User?
+        val location = values[1] as UserLocation?
+        val isServiceRunning = values[2] as Boolean
+        val friendList = values[3] as List<FriendModel>?
+        val searchResults = values[4] as List<User>?
+        val isSearching = values[5] as Boolean
+
         HomeUiState(
             currentUser = user,
             location = location,
             isServiceRunning = isServiceRunning,
-            friendList = friendList
+            friendList = friendList,
+            searchResults = searchResults,
+            isSearching = isSearching
         )
     }.stateIn(
         scope = viewModelScope,
@@ -100,5 +119,29 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun searchUsers(query: String) {
+        if (query.isBlank()) {
+            searchResultsState.value = null
+            isSearchingState.value = false
+            return
+        }
+
+        viewModelScope.launch {
+            isSearchingState.value = true
+            try {
+                val result = supabaseUserDataSource.searchUsers(query.trim())
+                searchResultsState.value = result.getOrNull()
+            } catch (e: Exception) {
+                searchResultsState.value = emptyList<User>()
+            } finally {
+                isSearchingState.value = false
+            }
+        }
+    }
+
+    fun clearSearchResults() {
+        searchResultsState.value = null
+        isSearchingState.value = false
+    }
 
 }

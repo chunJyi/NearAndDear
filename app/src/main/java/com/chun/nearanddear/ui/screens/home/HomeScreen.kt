@@ -80,6 +80,7 @@ import com.chun.nearanddear.R
 import com.chun.nearanddear.domain.model.FriendModel
 import com.chun.nearanddear.domain.model.UserLocation
 import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.ui.navigation.Routes
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -476,6 +477,23 @@ private fun FriendCard(
         ) {
             FriendsTabs(tabs, selectedIndex, onTabSelected)
             Spacer(Modifier.height(8.dp))
+
+            // View All Friends Button
+            if (selectedIndex == 0) {
+                Button(
+                    onClick = { navController.navigate(Routes.Main.FRIENDS) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2563EB),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("View All Friends")
+                }
+            }
+
 //            FriendListHeader(navController, tabs[selectedIndex], context)
             Spacer(Modifier.height(8.dp))
             when (selectedIndex) {
@@ -650,4 +668,5 @@ fun UserAddress(
         color = color
     )
 }
+
 
