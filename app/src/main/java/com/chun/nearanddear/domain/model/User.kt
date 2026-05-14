@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class User(
-
     @SerialName("id")
     val id: String,
     @SerialName("name")
