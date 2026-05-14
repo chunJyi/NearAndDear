@@ -78,7 +78,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chun.nearanddear.R
 import com.chun.nearanddear.domain.model.FriendModel
-import com.chun.nearanddear.domain.model.Location
+import com.chun.nearanddear.domain.model.UserLocation
 import com.chun.nearanddear.domain.model.User
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -201,7 +201,7 @@ fun AppBar(
 @Composable
 fun CarouselExampleMultiBrowse(
     currentUser: User?,
-    location: Location?
+    location: UserLocation?
 ) {
     data class CarouselItem(
         val id: Int,
@@ -243,7 +243,7 @@ fun CarouselExampleMultiBrowse(
 }
 
 @Composable
-fun UserLocationInfoCard(user: User?, location: Location?) {
+fun UserLocationInfoCard(user: User?, location: UserLocation?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -344,7 +344,7 @@ fun UserLocationInfoCard(user: User?, location: Location?) {
 }
 
 @Composable
-fun UserLocationMapCard(location: Location?, name: String? = null) {
+fun UserLocationMapCard(location: UserLocation?, name: String? = null) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -368,7 +368,7 @@ fun UserLocationMapCard(location: Location?, name: String? = null) {
 
 
 @Composable
-fun LocationMapCard(location: Location?, name: String? = null) {
+fun LocationMapCard(location: UserLocation?, name: String? = null) {
     val lat = location?.latitude ?: 16.778171
     val lon = location?.longitude ?: 96.138039
     val userLatLng = LatLng(lat, lon)

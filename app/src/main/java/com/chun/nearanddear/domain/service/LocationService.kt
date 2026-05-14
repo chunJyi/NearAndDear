@@ -15,7 +15,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.chun.nearanddear.data.remote.supabase.SupabaseAuthDataSource
 import com.chun.nearanddear.data.session.SessionDataStore
-import com.chun.nearanddear.domain.model.Location
+import com.chun.nearanddear.domain.model.UserLocation
 import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -57,8 +57,8 @@ class LocationService : Service() {
                     val lng = location.longitude
                     Log.d("LocationService", "Lat: $lat, Lng: $lng")
                     // Update location in SessionDataStore
-                    val domainLocation = Location(
-                        userID = sessionDataStore.userOrNull?.userID ?: "",
+                    val domainLocation = UserLocation(
+                        userId = sessionDataStore.userOrNull?.id ?: "",
                         latitude = lat,
                         longitude = lng,
                         updatedAt = Instant.now().toString()
@@ -95,11 +95,11 @@ class LocationService : Service() {
         latitude: Double,
         longitude: Double
     ): Result<Unit> {
-        val userId = sessionDataStore.userOrNull?.userID
+        val userId = sessionDataStore.userOrNull?.id
             ?: return Result.failure(IllegalStateException("User not logged in"))
 
-        val location = Location(
-            userID = userId,
+        val location = UserLocation(
+            userId = userId,
             latitude = latitude,
             longitude = longitude,
             updatedAt = Instant.now().toString()

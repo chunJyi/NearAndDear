@@ -24,10 +24,8 @@ class AuthRemoteDataSource {
                     this.email = inputUser.email
                     phone = inputUser.phone
                     avatarUrl = inputUser.avatarUrl
-                    userID = "user-${UUID.randomUUID()}"
+                    id = "user-${UUID.randomUUID()}"
                     updatedAt = ""
-                    startDate = ""
-                    endDate = ""
                 }
                 Result.success(builtUser)
             } catch (e: Exception) {

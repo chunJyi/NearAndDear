@@ -12,7 +12,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.chun.nearanddear.domain.auth.LoginErrorMapper
 import com.chun.nearanddear.domain.auth.LoginOutcome
 import com.chun.nearanddear.domain.model.User
-import com.chun.nearanddear.domain.model.UserState
+import com.chun.nearanddear.domain.model.UserRole
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -25,9 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -93,26 +90,20 @@ class GoogleAuthService @Inject constructor(
             val userId = user.id
             val email = user.email ?: "No Email"
             val phone = "No Phone"
-            val userState = UserState.NORMAL;
+            val userRole = UserRole.USER
             val name = user.userMetadata?.get("name")?.toString()?.trim('"') ?: "No Name"
             val avatarUrl = user.userMetadata?.get("avatar_url")?.toString()?.trim('"') ?: ""
             val updatedAt = Instant.now().toString()
 
-            val instant = LocalDateTime.now()
-                .plus(1, ChronoUnit.YEARS)
-                .toInstant(ZoneOffset.UTC)
-
             val userToInsert = User(
-                userID = userId,
-                name = name.toString(),
+                id = userId,
+                name = name,
                 email = email,
+                avatarUrl = avatarUrl,
                 phone = phone,
-                userState = userState,
-                avatarUrl = avatarUrl.toString(),
-                updatedAt = updatedAt,
+                role = userRole,
                 createdAt = updatedAt,
-                startDate = updatedAt,
-                endDate = instant.toString()
+                updatedAt = updatedAt
             )
             LoginOutcome.Success(userToInsert)
         } catch (e: CancellationException) {

@@ -1,8 +1,8 @@
 package com.chun.nearanddear.data.session
 
 import com.chun.nearanddear.domain.model.FriendModel
-import com.chun.nearanddear.domain.model.Location
 import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.domain.model.UserLocation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,13 +27,13 @@ class SessionDataStore @Inject constructor() {
     }
 
 
-    private val _location = MutableStateFlow<Location?>(null)
-    val locationModel: StateFlow<Location?> = _location.asStateFlow()
+    private val _location = MutableStateFlow<UserLocation?>(null)
+    val locationModel: StateFlow<UserLocation?> = _location.asStateFlow()
 
-    val locationOrNull: Location?
+    val locationOrNull: UserLocation?
         get() = _location.value
 
-    fun setLocation(location: Location) {
+    fun setLocation(location: UserLocation) {
         _location.value = location
     }
 

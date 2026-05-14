@@ -39,7 +39,7 @@ class SaveUserIdUseCase @Inject constructor(
 ) {
     operator fun invoke(user: User) {
         userPreferencesManager.saveUserInfo(
-            userId = user.userID,
+            userId = user.id,
             userName = user.name,
             userEmail = user.email
         )

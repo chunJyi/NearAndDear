@@ -1,8 +1,8 @@
 package com.chun.nearanddear.data.remote.supabase
 
 import android.util.Log
-import com.chun.nearanddear.domain.model.Location
 import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.domain.model.UserLocation
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.json.buildJsonObject
@@ -17,25 +17,25 @@ class SupabaseAuthDataSource @Inject constructor(
 ) {
 
     suspend fun signInWithGoogleIdToken(userToInsert: User): Result<User> = runCatching {
-        val existingUsers = client.from("loginUser").select {
-            filter { eq("userID", userToInsert.userID) }
+        val existingUsers = client.from("users").select {
+            filter { eq("id", userToInsert.id) }
         }.decodeList<User>()
 
         if (existingUsers.isEmpty()) {
-            client.from("loginUser").insert(userToInsert);
-            insertUserLocation(userToInsert.userID);
-            Log.d(TAG, "User inserted successfully: ${userToInsert.userID}")
+            client.from("users").insert(userToInsert)
+            insertUserLocation(userToInsert.id)
+            Log.d(TAG, "User inserted successfully: ${userToInsert.id}")
             userToInsert
         } else {
-            val existingUserLocation = client.from("location").select {
-                filter { eq("userID", userToInsert.userID) }
-            }.decodeList<Location>()
+            val existingUserLocation = client.from("user_location").select {
+                filter { eq("user_id", userToInsert.id) }
+            }.decodeList<UserLocation>()
 
             if (existingUserLocation.isEmpty()) {
-                insertUserLocation(userToInsert.userID);
+                insertUserLocation(userToInsert.id)
             }
 
-            Log.d(TAG, "User already exists: ${userToInsert.userID}")
+            Log.d(TAG, "User already exists: ${userToInsert.id}")
             existingUsers[0]
         }
     }.onFailure { e ->
@@ -43,18 +43,18 @@ class SupabaseAuthDataSource @Inject constructor(
     }
 
     suspend fun insertUserLocation(userId: String): Result<Unit> = runCatching {
-        val location = Location(
-            userID = userId,
+        val location = UserLocation(
+            userId = userId,
             latitude = 0.0,
             longitude = 0.0,
             updatedAt = Instant.now().toString()
         )
-        client.from("location").insert(location)
+        client.from("user_location").insert(location)
     }
 
-    suspend fun updateUserLocation(location: Location): Result<Int> =
+    suspend fun updateUserLocation(location: UserLocation): Result<Int> =
         runCatching {
-            Log.d(TAG, "Updating location for user ${location.userID}: lat=${location.latitude}, lng=${location.longitude}")
+            Log.d(TAG, "Updating location for user ${location.userId}: lat=${location.latitude}, lng=${location.longitude}")
 
             val body = buildJsonObject {
                 put("latitude", location.latitude)
@@ -62,11 +62,11 @@ class SupabaseAuthDataSource @Inject constructor(
                 put("updated_at", Instant.now().toString())
             }
             val response = client
-                .from("location")
+                .from("user_location")
                 .update(body
                     )
                  {
-                    filter { eq("userID", location.userID) }
+                    filter { eq("user_id", location.userId) }
                 }
 
             Log.d(TAG, "Location update response: $response")

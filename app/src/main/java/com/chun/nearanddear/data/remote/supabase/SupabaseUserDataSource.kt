@@ -12,12 +12,12 @@ class   SupabaseUserDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {
     suspend fun getUserById(userId: String): Result<User> = runCatching {
-        val users = client.from("loginUser").select {
-            filter { eq("userID", userId) }
+        val users = client.from("users").select {
+            filter { eq("id", userId) }
         }.decodeList<User>()
 
         if (users.isNotEmpty()) {
-            Log.d(TAG, "User found: ${users[0].userID}")
+            Log.d(TAG, "User found: ${users[0].id}")
             users[0]
         } else {
             Log.d(TAG, "No user found with ID: $userId")
