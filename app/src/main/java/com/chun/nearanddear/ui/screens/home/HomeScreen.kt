@@ -765,7 +765,7 @@ private fun FriendList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        navController.navigate("map")
+                        navController.navigate(Routes.Main.friendLocation(item.userID))
                     }
                     .padding(12.dp)
             ) {
@@ -890,5 +890,4 @@ fun UserAddress(
         color = color
     )
 }
-
 

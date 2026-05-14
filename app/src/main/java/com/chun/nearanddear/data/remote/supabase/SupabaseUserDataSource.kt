@@ -6,6 +6,7 @@ import com.chun.nearanddear.domain.model.FriendModel
 import com.chun.nearanddear.domain.model.FriendRequestItem
 import com.chun.nearanddear.domain.model.FriendState
 import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.domain.model.UserLocation
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.json.buildJsonObject
@@ -92,6 +93,16 @@ class SupabaseUserDataSource @Inject constructor(
         }.decodeList<User>()
     }.onFailure { e ->
         Log.e(TAG, "Failed to load users by ids: ${e.message}", e)
+    }
+
+    suspend fun getUserLocation(userId: String): Result<UserLocation?> = runCatching {
+        val locations = client.from("user_location").select {
+            filter { eq("user_id", userId) }
+        }.decodeList<UserLocation>()
+
+        locations.firstOrNull()
+    }.onFailure { e ->
+        Log.e(TAG, "Failed to load user location: ${e.message}", e)
     }
 
     suspend fun getAcceptedFriends(userId: String): Result<List<FriendModel>> = runCatching {

@@ -25,6 +25,7 @@ import androidx.navigation.NavController
 import com.chun.nearanddear.R
 import com.chun.nearanddear.domain.model.FriendModel
 import com.chun.nearanddear.domain.model.User
+import com.chun.nearanddear.ui.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +124,7 @@ fun FriendsScreen(
                                 UserSearchResultItem(
                                     user = user,
                                     onClick = {
-                                        navController.navigate("friend_detail/${user.id}")
+                                        navController.navigate(Routes.Main.friendDetail(user.id))
                                     }
                                 )
                             }
@@ -153,8 +154,7 @@ fun FriendsScreen(
                             FriendItem(
                                 friend = friend,
                                 onClick = {
-                                    // TODO: Navigate to friend details or map
-                                    navController.navigate("map")
+                                    navController.navigate(Routes.Main.friendLocation(friend.userID))
                                 }
                             )
                         }

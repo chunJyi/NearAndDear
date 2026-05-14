@@ -86,7 +86,7 @@ fun FriendDetailScreen(
                         successMessage = uiState.successMessage,
                         friendRequestSent = uiState.friendRequestSent,
                         onAddFriend = { viewModel.sendFriendRequest(userId) },
-                        onViewLocation = { navController.navigate(Routes.Main.HOME) },
+                        onViewLocation = { navController.navigate(Routes.Main.friendLocation(userId)) },
                         onSendMessage = { /* TODO: Implement messaging */ }
                     )
                 }

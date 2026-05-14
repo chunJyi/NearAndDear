@@ -11,6 +11,7 @@ import com.chun.nearanddear.ui.screens.splash.SplashScreen
 import com.chun.nearanddear.ui.screens.home.HomeScreen
 import com.chun.nearanddear.ui.screens.friends.FriendsScreen
 import com.chun.nearanddear.ui.screens.friendDetails.FriendDetailScreen
+import com.chun.nearanddear.ui.screens.friendLocation.FriendLocationScreen
 
 @Composable
 fun AppNavHost() {
@@ -58,6 +59,14 @@ fun AppNavHost() {
         composable(Routes.Main.FRIEND_DETAIL) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             FriendDetailScreen(
+                userId = userId,
+                navController = navController
+            )
+        }
+
+        composable(Routes.Main.FRIEND_LOCATION) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            FriendLocationScreen(
                 userId = userId,
                 navController = navController
             )
