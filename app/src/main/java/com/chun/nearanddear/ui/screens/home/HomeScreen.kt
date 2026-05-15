@@ -76,6 +76,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -155,6 +156,7 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = colorResource(id = R.color.background_color),
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
 
