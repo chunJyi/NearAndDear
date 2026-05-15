@@ -100,4 +100,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-pager:0.31.3-beta")
     implementation("com.google.accompanist:accompanist-permissions:0.31.3-beta")
 
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
 }

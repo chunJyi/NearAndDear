@@ -1,12 +1,17 @@
 package com.chun.nearanddear.ui.screens.home
 
+import android.R.attr.text
+import android.R.color.transparent
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import coil.compose.AsyncImage
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -73,6 +79,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -166,7 +173,11 @@ fun HomeScreen(
                 .padding(paddingValues),
         ) {
 
-            CarouselExampleMultiBrowse(uiState.currentUser, uiState.location)
+            CarouselExampleMultiBrowse(
+                uiState.currentUser,
+                uiState.location,
+                uiState.isServiceRunning
+            )
 
             FriendCard(
                 friendList = uiState.friendList,
@@ -197,27 +208,38 @@ fun AppBar(
             .fillMaxWidth()
             .padding(start = 20.dp, top = 15.dp, end = 20.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Near & Dear",
-            fontSize = 30.sp,
-            fontFamily = FontFamily.Cursive
-        )
-        Button(
-            onClick = onToggleService,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isServiceRunning) Color.Red else Color.Green,
-                contentColor = Color.White
-            ),
-            modifier = Modifier.height(40.dp)
-        ) {
+        verticalAlignment = Alignment.CenterVertically,
+        content = {
             Text(
-                text = if (isServiceRunning) "STOP" else "START",
-                fontSize = 14.sp
+                text = "Near & Dear",
+                fontSize = 30.sp,
+                fontFamily = FontFamily.Cursive
             )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            OutlinedButton(
+                onClick = onToggleService,
+                border = BorderStroke(1.dp, if (isServiceRunning) Color.Red else Color.Green),
+                modifier = Modifier.width(160.dp),
+                contentPadding = PaddingValues(1.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.LocationOn, contentDescription = "View Location")
+                    Text(
+                        text = if (isServiceRunning) "Stop Sharing Location" else "Start Sharing Location",
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
-    }
+    )
 }
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -225,7 +247,8 @@ fun AppBar(
 @Composable
 fun CarouselExampleMultiBrowse(
     currentUser: User?,
-    location: UserLocation?
+    location: UserLocation?,
+    isServiceRunning: Boolean
 ) {
     data class CarouselItem(
         val id: Int,
@@ -258,7 +281,11 @@ fun CarouselExampleMultiBrowse(
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) { i ->
             if (i == 0) {
-                UserLocationInfoCard(user = currentUser, location = location)
+                UserLocationInfoCard(
+                    user = currentUser,
+                    location = location,
+                    isServiceRunning = isServiceRunning
+                )
             } else {
                 UserLocationMapCard(location, name = currentUser?.name)
             }
@@ -267,7 +294,7 @@ fun CarouselExampleMultiBrowse(
 }
 
 @Composable
-fun UserLocationInfoCard(user: User?, location: UserLocation?) {
+fun UserLocationInfoCard(user: User?, location: UserLocation?, isServiceRunning: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,81 +313,91 @@ fun UserLocationInfoCard(user: User?, location: UserLocation?) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            
             // Content Overlay
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
             ) {
-            // User Data Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer
+                // User Data Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    if (user?.avatarUrl != null) {
+                        AsyncImage(
+                            model = user.avatarUrl,
+                            contentDescription = "Profile avatar",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = null,
+                                modifier = Modifier.padding(8.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        user?.name?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isServiceRunning) Color(0xFF2ECC71) else Color.Gray
+                                    )
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = if (isServiceRunning) "Live location" else "Offline",
+                                fontSize = 15.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    Modifier.fillMaxWidth(0.6f),
+                ) {
+                    Text(
+                        text = "📍",
+                        fontSize = 20.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    UserAddress(
+                        LocalContext.current,
+                        location?.latitude,
+                        location?.longitude,
+                        fontSize = 15.sp,
+                        color = Color.Black
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    user?.name?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (true) Color(0xFF2ECC71) else Color.Gray
-                                )
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = if (true) "Live location" else "Offline",
-                            fontSize = 15.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                Modifier.fillMaxWidth(0.6f),
-            ) {
-                Text(
-                    text = "📍",
-                    fontSize = 20.sp,
-                    color = Color.Gray
-                )
-                Spacer(Modifier.width(6.dp))
-                UserAddress(
-                    LocalContext.current,
-                    location?.latitude,
-                    location?.longitude,
-                    fontSize = 15.sp,
-                    color = Color.Black
-                )
-            }
-            Spacer(Modifier.fillMaxWidth(0.4f))
+                Spacer(Modifier.fillMaxWidth(0.4f))
 
             } // Close Column
         } // Close Box
@@ -832,20 +869,15 @@ private fun getImageAsync(avatarUrl: String?) {
             )
         }
     } else {
-        // TODO: Implement actual image loading with Coil or Glide
-        // For now, show placeholder
-        Surface(
-            modifier = Modifier.size(40.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Person,
-                contentDescription = "Avatar",
-                modifier = Modifier.padding(8.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
+        // Load image from URL using Coil
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = "Avatar",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +36,7 @@ fun FriendsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchVisible by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val isSearchFocused by interactionSource.collectIsFocusedAsState()
     
@@ -51,10 +53,43 @@ fun FriendsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Friends", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+                title = {
+                    if (isSearchVisible) {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search friends...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            )
+                        )
+                    } else {
+                        Text("", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isSearchVisible) {
+                        IconButton(onClick = {
+                            isSearchVisible = false
+                            searchQuery = ""
+                            viewModel.clearSearchResults()
+                        }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cancel Search")
+                        }
+                    } else {
+                        IconButton(onClick = { isSearchVisible = true }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Search")
+                        }
                     }
                 }
             )
@@ -66,32 +101,8 @@ fun FriendsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Search Bar
-            TextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search friends...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search Icon"
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                singleLine = true,
-                interactionSource = interactionSource,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color(0xFF2563EB),
-                    unfocusedIndicatorColor = Color.Gray
-                )
-            )
-
-            // Content based on search focus and query
-            if (isSearchFocused && searchQuery.isNotEmpty()) {
+            // Content based on search visibility and query
+            if (isSearchVisible ) {
                 // Show loading indicator if searching
                 if (uiState.isSearching) {
                     Box(
