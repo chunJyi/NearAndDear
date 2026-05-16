@@ -38,13 +38,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chun.nearanddear.R
 import com.chun.nearanddear.domain.model.User
 import com.chun.nearanddear.domain.model.UserLocation
 import com.chun.nearanddear.ui.screens.home.UserAddress
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -122,7 +127,20 @@ private fun FriendLocationContent(
     Box(Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
+            cameraPositionState = cameraPositionState,
+                    properties = MapProperties(
+                        isMyLocationEnabled = true,
+                        isBuildingEnabled = true,
+                        mapType = MapType.NORMAL,
+                        mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.dark_map_type)
+                    ),
+        uiSettings = MapUiSettings(
+            zoomControlsEnabled = true,
+            compassEnabled = true,
+            scrollGesturesEnabled = true,
+            tiltGesturesEnabled = true,
+            myLocationButtonEnabled = true
+        ),
         ) {
             if (hasLocation) {
                 Marker(
