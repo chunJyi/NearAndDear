@@ -40,11 +40,6 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val serviceRunningState = MutableStateFlow(false)
-    private val searchResultsState = MutableStateFlow<List<User>?>(null)
-    private val isSearchingState = MutableStateFlow(false)
-
-    private val incomingRequestsState = MutableStateFlow<List<FriendRequestItem>>(emptyList())
-    private val outgoingPendingState = MutableStateFlow<List<FriendRequestItem>>(emptyList())
     private val friendDataLoadingState = MutableStateFlow(false)
     private val friendDataErrorState = MutableStateFlow<String?>(null)
 
@@ -54,10 +49,6 @@ class HomeViewModel @Inject constructor(
             sessionDataStore.locationModel,
             serviceRunningState,
             sessionDataStore.friendModel,
-            searchResultsState,
-            isSearchingState,
-            incomingRequestsState,
-            outgoingPendingState,
             friendDataLoadingState,
             friendDataErrorState
         ) { values ->
@@ -66,22 +57,14 @@ class HomeViewModel @Inject constructor(
             val location = values[1] as UserLocation?
             val isServiceRunning = values[2] as Boolean
             val friendList = values[3] as List<FriendModel>?
-            val searchResults = values[4] as List<User>?
-            val isSearching = values[5] as Boolean
-            val incoming = values[6] as List<FriendRequestItem>
-            val outgoing = values[7] as List<FriendRequestItem>
-            val friendLoading = values[8] as Boolean
-            val friendError = values[9] as String?
+            val friendLoading = values[4] as Boolean
+            val friendError = values[5] as String?
 
             HomeUiState(
                 currentUser = user,
                 location = location,
                 isServiceRunning = isServiceRunning,
                 friendList = friendList,
-                searchResults = searchResults,
-                isSearching = isSearching,
-                incomingFriendRequests = incoming,
-                outgoingFriendRequests = outgoing,
                 isFriendDataLoading = friendLoading,
                 friendRequestsError = friendError
             )
@@ -95,8 +78,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             sessionDataStore.currentUser.collect { user ->
                 if (user == null) {
-                    incomingRequestsState.value = emptyList()
-                    outgoingPendingState.value = emptyList()
+
                     friendDataErrorState.value = null
                     sessionDataStore.clearFriend()
                 } else {
@@ -122,58 +104,11 @@ class HomeViewModel @Inject constructor(
                 onFailure = { combinedError = it.message ?: "Could not load friends" }
             )
 
-            val incoming = supabaseUserDataSource.getIncomingPendingFriendRequests(userId).fold(
-                onSuccess = { it },
-                onFailure = {
-                    if (combinedError == null) combinedError = it.message ?: "Could not load requests"
-                    emptyList()
-                }
-            )
-            incomingRequestsState.value = incoming
 
-            val outgoing = supabaseUserDataSource.getOutgoingPendingFriendRequests(userId).fold(
-                onSuccess = { it },
-                onFailure = {
-                    if (combinedError == null) combinedError = it.message ?: "Could not load pending"
-                    emptyList()
-                }
-            )
-            outgoingPendingState.value = outgoing
 
             friendDataErrorState.value = combinedError
             friendDataLoadingState.value = false
         }
-    }
-
-    fun acceptIncomingFriendRequest(relationshipId: String) {
-        viewModelScope.launch {
-            supabaseUserDataSource.acceptFriendRequest(relationshipId).fold(
-                onSuccess = { refreshFriendRequests() },
-                onFailure = { friendDataErrorState.value = it.message ?: "Could not accept request" }
-            )
-        }
-    }
-
-    fun declineIncomingFriendRequest(relationshipId: String) {
-        viewModelScope.launch {
-            supabaseUserDataSource.deleteFriendRelationship(relationshipId).fold(
-                onSuccess = { refreshFriendRequests() },
-                onFailure = { friendDataErrorState.value = it.message ?: "Could not decline request" }
-            )
-        }
-    }
-
-    fun cancelOutgoingFriendRequest(relationshipId: String) {
-        viewModelScope.launch {
-            supabaseUserDataSource.deleteFriendRelationship(relationshipId).fold(
-                onSuccess = { refreshFriendRequests() },
-                onFailure = { friendDataErrorState.value = it.message ?: "Could not cancel request" }
-            )
-        }
-    }
-
-    fun clearFriendRequestsError() {
-        friendDataErrorState.value = null
     }
 
     fun toggleService(context: Context) {
@@ -225,29 +160,5 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun searchUsers(query: String) {
-        if (query.isBlank()) {
-            searchResultsState.value = null
-            isSearchingState.value = false
-            return
-        }
-
-        viewModelScope.launch {
-            isSearchingState.value = true
-            try {
-                val result = supabaseUserDataSource.searchUsers(query.trim())
-                searchResultsState.value = result.getOrNull()
-            } catch (e: Exception) {
-                searchResultsState.value = emptyList<User>()
-            } finally {
-                isSearchingState.value = false
-            }
-        }
-    }
-
-    fun clearSearchResults() {
-        searchResultsState.value = null
-        isSearchingState.value = false
-    }
 
 }
