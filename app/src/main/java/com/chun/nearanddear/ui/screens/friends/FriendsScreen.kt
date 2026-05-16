@@ -1,6 +1,7 @@
 package com.chun.nearanddear.ui.screens.friends
 
 import coil.compose.AsyncImage
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +15,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +46,7 @@ fun FriendsScreen(
     var searchQuery by remember { mutableStateOf("") }
     var isSearchVisible by remember { mutableStateOf(false) }
     var selectedFriendStateTab by remember { mutableIntStateOf(0) }
-    
+
     // Trigger search when query changes
     LaunchedEffect(searchQuery) {
         if (searchQuery.isNotEmpty()) {
@@ -189,15 +193,11 @@ private fun FriendStateList(
             "Pending" to outgoingFriendRequests.size
         )
 
-        PrimaryTabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, tab ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { onTabSelected(index) },
-                    text = { Text("${tab.first} (${tab.second})") }
-                )
-            }
-        }
+        FriendStateTabs(
+            tabs = tabs,
+            selectedTab = selectedTab,
+            onTabSelected = onTabSelected
+        )
 
         errorMessage?.let { message ->
             Text(
@@ -237,6 +237,89 @@ private fun FriendStateList(
                 pending = outgoingFriendRequests,
                 onCancel = onCancelOutgoingRequest
             )
+        }
+    }
+}
+
+@Composable
+private fun FriendStateTabs(
+    tabs: List<Pair<String, Int>>,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            val isSelected = selectedTab == index
+            OutlinedButton(
+                onClick = { onTabSelected(index) },
+                modifier = Modifier
+                    .height(42.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (isSelected) {
+                        Color.Blue
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    }
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (isSelected) {
+                        Color.Blue
+                    } else {
+                        Color.Transparent
+                    },
+                    contentColor = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
+                )
+            ) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+
+                    val iconColor = when (tab.first) {
+                        "Friends" -> Color(0xFF4CAF50)   // green
+                        "Request" -> Color(0xFF2196F3)   // blue
+                        else -> Color(0xFFFF9800)   // orange
+                    }
+
+                    Icon(
+                        painter = painterResource(
+                            id = when (tab.first) {
+                                "Friends" -> R.drawable.group
+                                "Request" -> R.drawable.add_friend
+                                else -> R.drawable.friend_request
+                            }
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            iconColor
+                        }
+                    )
+
+                    Text(
+                        text = "${tab.first} (${tab.second})",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 13.sp
+                    )
+
+                }
+
+            }
         }
     }
 }
@@ -394,13 +477,32 @@ private fun IncomingRequestListCard(
                     onClick = onAccept,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Accept")
+                    Row( verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Check   ,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Accept")
+                    }
                 }
                 OutlinedButton(
                     onClick = onDecline,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Decline")
+                    Row( verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+
+                        Icon(
+                            imageVector = Icons.Default.Close   ,
+                            contentDescription = null,
+                            tint = Color.Red
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Decline")
+                    }
                 }
             }
         }
@@ -435,7 +537,17 @@ private fun OutgoingPendingListCard(
                 onClick = onCancel,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancel request")
+
+                Row( verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        tint = Color.Red
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Cancel request")
+                }
             }
         }
     }
