@@ -159,7 +159,10 @@ fun FriendsScreen(
                     isLoading = uiState.isLoadingFriends,
                     errorMessage = uiState.error,
                     onDismissError = viewModel::clearError,
-                    onFriendClick = { friend ->
+                    onFriendClickDetail = { friend ->
+                        navController.navigate(Routes.Main.friendDetail(friend.userID))
+                    },
+                    onFriendClickMap = { friend ->
                         navController.navigate(Routes.Main.friendLocation(friend.userID))
                     },
                     onAcceptIncomingRequest = viewModel::acceptIncomingFriendRequest,
@@ -181,7 +184,8 @@ private fun FriendStateList(
     isLoading: Boolean,
     errorMessage: String?,
     onDismissError: () -> Unit,
-    onFriendClick: (FriendModel) -> Unit,
+    onFriendClickDetail: (FriendModel) -> Unit,
+    onFriendClickMap: (FriendModel) -> Unit,
     onAcceptIncomingRequest: (String) -> Unit,
     onDeclineIncomingRequest: (String) -> Unit,
     onCancelOutgoingRequest: (String) -> Unit
@@ -224,16 +228,17 @@ private fun FriendStateList(
         when (selectedTab) {
             0 -> FriendCardsList(
                 friends = friendList,
-                onFriendClick = onFriendClick
+                onFriendClickDetail = onFriendClickDetail,
+                onFriendClickMap = onFriendClickMap
             )
 
-            1 -> IncomingRequestCardsList(
+            2 -> IncomingRequestCardsList(
                 requests = incomingFriendRequests,
                 onAccept = onAcceptIncomingRequest,
                 onDecline = onDeclineIncomingRequest
             )
 
-            2 -> OutgoingPendingCardsList(
+            3 -> OutgoingPendingCardsList(
                 pending = outgoingFriendRequests,
                 onCancel = onCancelOutgoingRequest
             )
@@ -288,6 +293,7 @@ private fun FriendStateTabs(
 
                     val iconColor = when (tab.first) {
                         "Friends" -> Color(0xFF4CAF50)   // green
+                        "Favorites" -> Color(0xFFE11D48) // rose
                         "Request" -> Color(0xFF2196F3)   // blue
                         else -> Color(0xFFFF9800)   // orange
                     }
@@ -327,7 +333,8 @@ private fun FriendStateTabs(
 @Composable
 private fun FriendCardsList(
     friends: List<FriendModel>,
-    onFriendClick: (FriendModel) -> Unit
+    onFriendClickDetail: (FriendModel) -> Unit,
+    onFriendClickMap: (FriendModel) -> Unit,
 ) {
     if (friends.isEmpty()) {
         EmptyFriendState(message = "No friends yet")
@@ -342,7 +349,8 @@ private fun FriendCardsList(
         items(friends, key = { it.userID }) { friend ->
             FriendListCard(
                 friend = friend,
-                onClick = { onFriendClick(friend) }
+                onClickDetail = { onFriendClickDetail(friend) },
+                onClickMap = { onFriendClickMap(friend) }
             )
         }
     }
@@ -401,12 +409,13 @@ private fun OutgoingPendingCardsList(
 @Composable
 private fun FriendListCard(
     friend: FriendModel,
-    onClick: () -> Unit
+    onClickDetail: () -> Unit,
+    onClickMap: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClickDetail),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -440,9 +449,15 @@ private fun FriendListCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 FriendStateBadge(label = "FRIEND", color = Color(0xFF2ECC71))
             }
-            TextButton(onClick = onClick) {
-                Text("Location")
-            }
+            Icon(
+                painter = painterResource(id = R.drawable.pin_map),
+                contentDescription = "Details",
+                tint = Color.Unspecified,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable(onClick = onClickMap)
+
+            )
         }
     }
 }
@@ -477,10 +492,12 @@ private fun IncomingRequestListCard(
                     onClick = onAccept,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Row( verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Check   ,
+                            imageVector = Icons.Default.Check,
                             contentDescription = null,
                             tint = Color.White
                         )
@@ -492,11 +509,13 @@ private fun IncomingRequestListCard(
                     onClick = onDecline,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Row( verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
 
                         Icon(
-                            imageVector = Icons.Default.Close   ,
+                            imageVector = Icons.Default.Close,
                             contentDescription = null,
                             tint = Color.Red
                         )
@@ -538,8 +557,10 @@ private fun OutgoingPendingListCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
 
-                Row( verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,

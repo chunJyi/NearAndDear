@@ -158,28 +158,32 @@ private fun FriendDetailContent(
             ) {
                 Icon(
                     if (friendRequestSent) Icons.Filled.Check else Icons.Filled.Person,
-                    contentDescription = if (friendRequestSent) "Request Sent" else "Add Friend"
+                    contentDescription = if (friendRequestSent) "Request Sent" else "Add Friend",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (friendRequestSent) "Request Sent" else "Add Friend")
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(if (friendRequestSent) "Request Sent" else "Add Friend", fontSize = 11.sp)
             }
 
             OutlinedButton(
                 onClick = onViewLocation,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.wrapContentWidth(),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Icon(Icons.Filled.LocationOn, contentDescription = "View Location")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Location")
+                Icon(Icons.Filled.LocationOn, contentDescription = "View Location", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Location", fontSize = 11.sp)
             }
 
             OutlinedButton(
                 onClick = onSendMessage,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.wrapContentWidth(),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Icon(Icons.Filled.Email, contentDescription = "Send Message")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Message")
+                Icon(Icons.Filled.Email, contentDescription = "Send Message", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Message", fontSize = 11.sp)
             }
         }
 
