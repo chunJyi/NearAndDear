@@ -1,7 +1,6 @@
 package com.chun.nearanddear.ui.screens.home
 
-import android.R.attr.text
-import android.R.color.transparent
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
@@ -11,12 +10,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import coil.compose.AsyncImage
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +35,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,8 +52,6 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -72,9 +71,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -88,9 +87,11 @@ import com.chun.nearanddear.domain.model.FriendModel
 import com.chun.nearanddear.domain.model.UserLocation
 import com.chun.nearanddear.domain.model.User
 import com.chun.nearanddear.ui.navigation.Routes
+import com.chun.nearanddear.ui.theme.NearAndDearFontFamily
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import androidx.compose.material.icons.filled.Settings
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -158,6 +159,15 @@ fun HomeScreen(
                 isServiceRunning = uiState.isServiceRunning,
                 onToggleService = { viewModel.toggleService(context) }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate(Routes.Main.SETTINGS) },
+                modifier = Modifier.padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.onSecondary
+            ) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+            }
         }
     ) { paddingValues ->
         Column(
@@ -195,28 +205,39 @@ fun AppBar(
             Text(
                 text = "Near & Dear",
                 fontSize = 30.sp,
-                fontFamily = FontFamily.Cursive
+                style = MaterialTheme.typography.headlineMedium,
+                fontFamily = NearAndDearFontFamily
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
             OutlinedButton(
                 onClick = onToggleService,
-                border = BorderStroke(1.dp, if (isServiceRunning) Color.Red else Color.Green),
-                modifier = Modifier.width(160.dp),
-                contentPadding = PaddingValues(1.dp)
+                border = BorderStroke(
+                    1.dp,
+                    if (isServiceRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.width(140.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.LocationOn, contentDescription = "View Location")
+                    Icon(
+                        Icons.Filled.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (isServiceRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
                     Text(
-                        text = if (isServiceRunning) "Stop Sharing Location" else "Start Sharing Location",
+                        text = if (isServiceRunning) "Stop Sharing" else "Start Sharing",
                         fontSize = 12.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -281,8 +302,8 @@ fun UserLocationInfoCard(user: User?, location: UserLocation?, isServiceRunning:
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(15.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Box(
             modifier = Modifier
@@ -392,15 +413,14 @@ fun UserLocationMapCard(location: UserLocation?, name: String? = null) {
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(15.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // User Data Header
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(5.dp),
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LocationMapCard(location, name)
@@ -455,7 +475,7 @@ private fun FriendCard(
     navController: NavController
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFBFBFD)),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -466,18 +486,21 @@ private fun FriendCard(
                 .padding(16.dp)
         ) {
 
-            Button(
-                onClick = { navController.navigate(Routes.Main.FRIENDS) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2563EB),
-                    contentColor = Color.White
+            Row( modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Friends")
+
+                Text(
+                    text = "View All Friends",
+                    color = MaterialTheme.colorScheme.primary,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable {
+                        navController.navigate(Routes.Main.FRIENDS)
+                    }
                 )
-            ) {
-                Text("View All Friends")
             }
+
             FriendList(navController, friendList)
         }
     }
@@ -527,7 +550,7 @@ private fun FriendList(
                     }
 
                     Icon(
-                        painter = painterResource(id = R.drawable.facebook_logo),
+                        painter = painterResource(id = R.drawable.pin_map),
                         contentDescription = "Details",
                         tint = Color.Unspecified,
                         modifier = Modifier.size(24.dp)

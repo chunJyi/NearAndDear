@@ -11,6 +11,7 @@ object Routes {
         const val FRIENDS = "friends"
         const val FRIEND_DETAIL = "friend_detail/{userId}"
         const val FRIEND_LOCATION = "friend_location/{userId}"
+        const val SETTINGS = "settings"
 
         fun friendDetail(userId: String) = "friend_detail/$userId"
         fun friendLocation(userId: String) = "friend_location/$userId"

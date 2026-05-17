@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import com.chun.nearanddear.ui.navigation.AppNavHost
+import com.chun.nearanddear.ui.theme.NearAndDearTheme
 import com.chun.nearanddear.utils.PermissionManager
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -27,7 +28,9 @@ class MainActivity : ComponentActivity() {
         
         if (permissionManager.areAllPermissionsGranted()) {
             setContent {
-                AppNavHost()
+                NearAndDearTheme {
+                    AppNavHost()
+                }
             }
         } else {
             requestPermissions()
@@ -41,7 +44,9 @@ class MainActivity : ComponentActivity() {
             permissionLauncher.launch(deniedPermissions.toTypedArray())
         } else {
             setContent {
-                AppNavHost()
+                NearAndDearTheme {
+                    AppNavHost()
+                }
             }
         }
     }
@@ -61,7 +66,9 @@ class MainActivity : ComponentActivity() {
             
             // Still show the app but with limited functionality
             setContent {
-                AppNavHost()
+                NearAndDearTheme {
+                    AppNavHost()
+                }
             }
         }
     }
