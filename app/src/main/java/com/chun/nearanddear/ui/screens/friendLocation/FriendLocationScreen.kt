@@ -1,6 +1,10 @@
 package com.chun.nearanddear.ui.screens.friendLocation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -25,6 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -32,6 +40,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -131,14 +142,18 @@ private fun FriendLocationContent(
         visibleLocation?.latitude ?: DefaultMapCenter.latitude,
         visibleLocation?.longitude ?: DefaultMapCenter.longitude
     )
+    var followTarget by remember { mutableStateOf(true) }
+    var showInfoCard by remember { mutableStateOf(true) }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(markerPosition, if (hasLocation) 15f else 11f)
     }
 
-    LaunchedEffect(markerPosition, hasLocation) {
-        cameraPositionState.animate(
-            CameraUpdateFactory.newLatLngZoom(markerPosition, if (hasLocation) 15f else 11f)
-        )
+    LaunchedEffect(markerPosition, hasLocation, followTarget) {
+        if (followTarget && hasLocation) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(markerPosition, if (hasLocation) 15f else 11f)
+            )
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -175,81 +190,177 @@ private fun FriendLocationContent(
             }
         }
 
-        Card(
+        AnimatedVisibility(
+            visible = showInfoCard,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            enter = slideInVertically { it },
+            exit = slideOutVertically { it }
         ) {
-            Column(Modifier.padding(16.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocationOn,
+                            contentDescription = null,
+                            tint = if (hasLocation) Color(0xFF2563EB) else Color.Gray
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = friend?.name ?: "Friend",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = when {
+                                    hasLocation && isLive -> "Live tracking"
+                                    hasLocation -> "Tracking (polling)"
+                                    else -> "Location not available"
+                                },
+                                color = Color.Gray,
+                                fontSize = 13.sp
+                            )
+                        }
+                        if (hasLocation) {
+                            LiveTrackingBadge(isLive = isLive)
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        IconButton(onClick = { showInfoCard = false }) {
+                            Icon(
+                                imageVector = Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Hide info"
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    if (hasLocation) {
+                        FollowTargetToggle(
+                            followTarget = followTarget,
+                            onFollowTargetChange = { followTarget = it }
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        UserAddress(
+                            context = context,
+                            latitude = visibleLocation?.latitude,
+                            longitude = visibleLocation?.longitude,
+                            color = Color(0xFF111827)
+                        )
+                        visibleLocation?.updatedAt?.let {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Updated $it",
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+                        if (trackPoints.size >= 2) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Path: ${trackPoints.size} points",
+                                color = Color(0xFF2563EB),
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Ask your friend to start location sharing. Updates appear automatically.",
+                            color = Color(0xFF4B5563)
+                        )
+                    }
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = !showInfoCard,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp),
+            enter = slideInVertically { it },
+            exit = slideOutVertically { it }
+        ) {
+            Surface(
+                modifier = Modifier.clickable { showInfoCard = true },
+                shape = MaterialTheme.shapes.large,
+                color = Color.White,
+                shadowElevation = 6.dp
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Filled.LocationOn,
                         contentDescription = null,
-                        tint = if (hasLocation) Color(0xFF2563EB) else Color.Gray
+                        tint = Color(0xFF2563EB),
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = friend?.name ?: "Friend",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = when {
-                                hasLocation && isLive -> "Live tracking"
-                                hasLocation -> "Tracking (polling)"
-                                else -> "Location not available"
-                            },
-                            color = Color.Gray,
-                            fontSize = 13.sp
-                        )
-                    }
-                    if (hasLocation) {
-                        LiveTrackingBadge(isLive = isLive)
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                if (hasLocation) {
-                    UserAddress(
-                        context = context,
-                        latitude = visibleLocation?.latitude,
-                        longitude = visibleLocation?.longitude,
-                        color = Color(0xFF111827)
-                    )
-                    visibleLocation?.updatedAt?.let {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = "Updated $it",
-                            color = Color.Gray,
-                            fontSize = 12.sp
-                        )
-                    }
-                    if (trackPoints.size >= 2) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = "Path: ${trackPoints.size} points",
-                            color = Color(0xFF2563EB),
-                            fontSize = 12.sp
-                        )
-                    }
-                } else {
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Ask your friend to start location sharing. Updates appear automatically.",
-                        color = Color(0xFF4B5563)
+                        text = friend?.name ?: "Show info",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowUp,
+                        contentDescription = "Show info",
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FollowTargetToggle(
+    followTarget: Boolean,
+    onFollowTargetChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Follow on map",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = if (followTarget) {
+                    "Camera follows friend"
+                } else {
+                    "Map stays where you pan"
+                },
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
+        }
+        Switch(
+            checked = followTarget,
+            onCheckedChange = onFollowTargetChange
+        )
     }
 }
 
