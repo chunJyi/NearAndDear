@@ -65,6 +65,13 @@ enum class UserRole {
     ADMIN
 }
 
+/** Whether [viewerId] marked the other person in this row as a favorite. */
+fun Friend.isFavoriteFor(viewerId: String): Boolean = when (viewerId) {
+    userId -> isFavorite
+    friendId -> friendIsFavorite
+    else -> false
+}
+
 @Serializable
 data class Friend(
     @SerialName("id")
@@ -75,6 +82,10 @@ data class Friend(
     val friendId: String,
     @SerialName("status")
     val status: FriendStatus,
+    @SerialName("is_favorite")
+    val isFavorite: Boolean = false,
+    @SerialName("friend_is_favorite")
+    val friendIsFavorite: Boolean = false,
     @SerialName("created_at")
     val createdAt: String? = null
 )
@@ -93,10 +104,12 @@ enum class FriendStatus {
 
 @Serializable
 data class FriendModel(
+    val relationshipId: String,
     val userID: String,
     val name: String,
     var friendState: FriendState,
-    val friendAvatarUrl: String
+    val friendAvatarUrl: String,
+    val isFavorite: Boolean = false
 )
 
 @Serializable

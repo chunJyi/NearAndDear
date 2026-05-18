@@ -3,6 +3,7 @@ package com.chun.nearanddear.data.remote.supabase
 import android.util.Log
 import com.chun.nearanddear.domain.model.Friend
 import com.chun.nearanddear.domain.model.FriendModel
+import com.chun.nearanddear.domain.model.isFavoriteFor
 import com.chun.nearanddear.domain.model.FriendRequestItem
 import com.chun.nearanddear.domain.model.FriendState
 import com.chun.nearanddear.domain.model.User
@@ -131,14 +132,41 @@ class SupabaseUserDataSource @Inject constructor(
             val otherId = if (row.userId == userId) row.friendId else row.userId
             val u = users[otherId] ?: return@mapNotNull null
             FriendModel(
+                relationshipId = row.id ?: return@mapNotNull null,
                 userID = u.id,
                 name = u.name,
                 friendState = FriendState.FRIEND,
-                friendAvatarUrl = u.avatarUrl.orEmpty()
+                friendAvatarUrl = u.avatarUrl.orEmpty(),
+                isFavorite = row.isFavoriteFor(userId)
             )
         }
     }.onFailure { e ->
         Log.e(TAG, "Failed to load accepted friends: ${e.message}", e)
+    }
+
+    suspend fun setFriendFavorite(
+        relationshipId: String,
+        currentUserId: String,
+        isFavorite: Boolean
+    ): Result<Int> = runCatching {
+        val row = client.from("friends").select {
+            filter { eq("id", relationshipId) }
+        }.decodeList<Friend>().firstOrNull()
+            ?: throw NoSuchElementException("Friend relationship not found: $relationshipId")
+
+        val body = buildJsonObject {
+            when (currentUserId) {
+                row.userId -> put("is_favorite", isFavorite)
+                row.friendId -> put("friend_is_favorite", isFavorite)
+                else -> throw IllegalStateException("User is not part of this friendship")
+            }
+        }
+        client.from("friends").update(body) {
+            filter { eq("id", relationshipId) }
+        }
+        Log.d(TAG, "Friend favorite updated: $relationshipId ($currentUserId) -> $isFavorite")
+    }.onFailure { e ->
+        Log.e(TAG, "Failed to update friend favorite: ${e.message}", e)
     }
 
     suspend fun getIncomingPendingFriendRequests(currentUserId: String): Result<List<FriendRequestItem>> =

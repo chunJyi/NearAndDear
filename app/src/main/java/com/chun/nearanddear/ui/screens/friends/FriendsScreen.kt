@@ -15,9 +15,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -165,6 +164,7 @@ fun FriendsScreen(
                     onFriendClickMap = { friend ->
                         navController.navigate(Routes.Main.friendLocation(friend.userID))
                     },
+                    onFavoriteClick = viewModel::setFriendFavorite,
                     onAcceptIncomingRequest = viewModel::acceptIncomingFriendRequest,
                     onDeclineIncomingRequest = viewModel::declineIncomingFriendRequest,
                     onCancelOutgoingRequest = viewModel::cancelOutgoingFriendRequest
@@ -186,13 +186,16 @@ private fun FriendStateList(
     onDismissError: () -> Unit,
     onFriendClickDetail: (FriendModel) -> Unit,
     onFriendClickMap: (FriendModel) -> Unit,
+    onFavoriteClick: (FriendModel, Boolean) -> Unit,
     onAcceptIncomingRequest: (String) -> Unit,
     onDeclineIncomingRequest: (String) -> Unit,
     onCancelOutgoingRequest: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
+        val favoriteFriends = friendList.filter { it.isFavorite }
         val tabs = listOf(
             "Friends" to friendList.size,
+            "Favorites" to favoriteFriends.size,
             "Request" to incomingFriendRequests.size,
             "Pending" to outgoingFriendRequests.size
         )
@@ -229,7 +232,16 @@ private fun FriendStateList(
             0 -> FriendCardsList(
                 friends = friendList,
                 onFriendClickDetail = onFriendClickDetail,
-                onFriendClickMap = onFriendClickMap
+                onFriendClickMap = onFriendClickMap,
+                onFavoriteClick = onFavoriteClick
+            )
+
+            1 -> FriendCardsList(
+                friends = favoriteFriends,
+                emptyMessage = "No favorite friends yet",
+                onFriendClickDetail = onFriendClickDetail,
+                onFriendClickMap = onFriendClickMap,
+                onFavoriteClick = onFavoriteClick
             )
 
             2 -> IncomingRequestCardsList(
@@ -298,22 +310,32 @@ private fun FriendStateTabs(
                         else -> Color(0xFFFF9800)   // orange
                     }
 
-                    Icon(
-                        painter = painterResource(
-                            id = when (tab.first) {
-                                "Friends" -> R.drawable.group
-                                "Request" -> R.drawable.add_friend
-                                else -> R.drawable.friend_request
-                            }
-                        ),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            iconColor
-                        }
-                    )
+                    val selectedIconColor = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        iconColor
+                    }
+                    if (tab.first == "Favorites") {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = selectedIconColor
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(
+                                id = when (tab.first) {
+                                    "Friends" -> R.drawable.group
+                                    "Request" -> R.drawable.add_friend
+                                    else -> R.drawable.friend_request
+                                }
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = selectedIconColor
+                        )
+                    }
 
                     Text(
                         text = "${tab.first} (${tab.second})",
@@ -333,11 +355,13 @@ private fun FriendStateTabs(
 @Composable
 private fun FriendCardsList(
     friends: List<FriendModel>,
+    emptyMessage: String = "No friends yet",
     onFriendClickDetail: (FriendModel) -> Unit,
     onFriendClickMap: (FriendModel) -> Unit,
+    onFavoriteClick: (FriendModel, Boolean) -> Unit,
 ) {
     if (friends.isEmpty()) {
-        EmptyFriendState(message = "No friends yet")
+        EmptyFriendState(message = emptyMessage)
         return
     }
 
@@ -350,7 +374,8 @@ private fun FriendCardsList(
             FriendListCard(
                 friend = friend,
                 onClickDetail = { onFriendClickDetail(friend) },
-                onClickMap = { onFriendClickMap(friend) }
+                onClickMap = { onFriendClickMap(friend) },
+                onFavoriteClick = { onFavoriteClick(friend, !friend.isFavorite) }
             )
         }
     }
@@ -410,7 +435,8 @@ private fun OutgoingPendingCardsList(
 private fun FriendListCard(
     friend: FriendModel,
     onClickDetail: () -> Unit,
-    onClickMap: () -> Unit
+    onClickMap: () -> Unit,
+    onFavoriteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -448,6 +474,21 @@ private fun FriendListCard(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 FriendStateBadge(label = "FRIEND", color = Color(0xFF2ECC71))
+            }
+            IconButton(onClick = onFavoriteClick) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = if (friend.isFavorite) {
+                        "Remove favorite"
+                    } else {
+                        "Add favorite"
+                    },
+                    tint = if (friend.isFavorite) {
+                        Color(0xFFFFB300)
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    }
+                )
             }
             Icon(
                 painter = painterResource(id = R.drawable.pin_map),

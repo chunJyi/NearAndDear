@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -50,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.TopAppBarDefaults
@@ -92,6 +95,12 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.TextButton
+import com.chun.nearanddear.domain.model.FriendState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -173,7 +182,8 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .padding(horizontal = 10.dp)
         ) {
 
             CarouselExampleMultiBrowse(
@@ -181,7 +191,7 @@ fun HomeScreen(
                 uiState.location,
                 uiState.isServiceRunning
             )
-
+            FriendsStoryRow(uiState.friendList);
             FriendCard(
                 friendList = uiState.friendList,
                 navController = navController
@@ -221,7 +231,7 @@ fun AppBar(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(20.dp),
 
-            ) {
+                ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -278,10 +288,9 @@ fun CarouselExampleMultiBrowse(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .padding(top = 16.dp, bottom = 16.dp),
+                .padding(vertical = 0.dp),
             preferredItemWidth = itemWidth,
-            itemSpacing = 12.dp,
-            contentPadding = PaddingValues(horizontal = 16.dp)
+            itemSpacing = 12.dp
         ) { i ->
             if (i == 0) {
                 UserLocationInfoCard(
@@ -294,6 +303,95 @@ fun CarouselExampleMultiBrowse(
             }
         }
     }
+}
+
+@Composable
+private fun FriendsStoryRow(
+    friendList: List<FriendModel>?,
+) {
+    val friends =
+        friendList?.filter { FriendState.FRIEND == it.friendState && it.isFavorite } ?: emptyList()
+    var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp)
+    ) {
+        Text("Favorite Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .fillMaxWidth()
+        ) {
+            // Iterate through the filtered friends and display them
+            friends.take(6).forEachIndexed { index, friend ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable { selectedFriend = friend }
+                        .padding(end = 10.dp)
+                        .widthIn(max = 60.dp) // Flexible width but constrained to a max of 80.dp
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .background(Color.LightGray)
+                    ) {
+                        GetImageAsyncForTab(friend.friendAvatarUrl)
+
+                    }
+                    Text(
+                        friend.name, fontSize = 12.sp, maxLines = 1, // Limit to 1 line
+                        overflow = TextOverflow.Ellipsis, // Add ellipsis when text overflows
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    selectedFriend?.let { friend ->
+
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Delete Friend") },
+                text = { Text("Are you sure you want to delete ${friend.name}?") },
+                confirmButton = {
+                    TextButton(onClick = {
+//                        removeFriend(context, friend.userID, "deleted")
+                        selectedFriend = null
+                        showDeleteConfirmation = false
+                    }) {
+                        Text("Delete", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun GetImageAsyncForTab(imageUrl: String) {
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = "Avatar",
+        placeholder = painterResource(R.drawable.user),
+        error = painterResource(R.drawable.user),
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
@@ -475,7 +573,9 @@ private fun FriendCard(
     navController: NavController
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFBFBFD)),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -486,11 +586,12 @@ private fun FriendCard(
                 .padding(16.dp)
         ) {
 
-            Row( modifier = Modifier.fillMaxWidth(),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Friends")
-
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     text = "View All Friends",
                     color = MaterialTheme.colorScheme.primary,

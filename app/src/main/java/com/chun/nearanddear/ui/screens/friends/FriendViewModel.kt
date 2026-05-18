@@ -176,6 +176,24 @@ class FriendViewModel @Inject constructor(
         }
     }
 
+    fun setFriendFavorite(friend: FriendModel, isFavorite: Boolean) {
+        val currentUserId = sessionDataStore.currentUser.value?.id ?: return
+        viewModelScope.launch {
+            sessionDataStore.updateFriendFavorite(friend.relationshipId, isFavorite)
+            supabaseUserDataSource.setFriendFavorite(
+                relationshipId = friend.relationshipId,
+                currentUserId = currentUserId,
+                isFavorite = isFavorite
+            ).fold(
+                onSuccess = { },
+                onFailure = {
+                    sessionDataStore.updateFriendFavorite(friend.relationshipId, friend.isFavorite)
+                    errorState.value = it.message ?: "Could not update favorite"
+                }
+            )
+        }
+    }
+
     fun clearError() {
         errorState.value = null
     }

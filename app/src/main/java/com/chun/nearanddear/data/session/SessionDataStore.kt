@@ -51,6 +51,16 @@ class SessionDataStore @Inject constructor() {
         _friends.value = friends
     }
 
+    fun updateFriendFavorite(relationshipId: String, isFavorite: Boolean) {
+        _friends.value = _friends.value.map { friend ->
+            if (friend.relationshipId == relationshipId) {
+                friend.copy(isFavorite = isFavorite)
+            } else {
+                friend
+            }
+        }
+    }
+
     fun clearFriend() {
         _friends.value = emptyList()
     }
