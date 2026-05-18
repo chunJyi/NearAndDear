@@ -37,6 +37,9 @@ before update on user_location
 for each row
 execute function handle_updated_at();
 
+-- Realtime: push location updates to friends watching the map
+alter publication supabase_realtime add table user_location;
+
 
 create table friends (
   id uuid primary key default gen_random_uuid(),

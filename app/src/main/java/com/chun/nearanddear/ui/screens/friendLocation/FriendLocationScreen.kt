@@ -1,5 +1,6 @@
 package com.chun.nearanddear.ui.screens.friendLocation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
@@ -25,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,7 +56,10 @@ import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+
+private val DefaultMapCenter = LatLng(16.778171, 96.138039)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +71,11 @@ fun FriendLocationScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(userId) {
-        viewModel.loadFriendLocation(userId)
+        viewModel.startObservingFriendLocation(userId)
+    }
+
+    DisposableEffect(userId) {
+        onDispose { viewModel.stopObservingFriendLocation() }
     }
 
     Scaffold(
@@ -85,16 +96,21 @@ fun FriendLocationScreen(
                 .padding(paddingValues)
         ) {
             when {
-                uiState.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                uiState.errorMessage != null && uiState.friend == null -> FriendLocationError(
-                    message = uiState.errorMessage ?: "Could not load friend location",
-                    onRetry = { viewModel.loadFriendLocation(userId) },
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                uiState.isLoading && uiState.friend == null -> {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                }
+                uiState.errorMessage != null && uiState.friend == null -> {
+                    FriendLocationError(
+                        message = uiState.errorMessage ?: "Could not load friend location",
+                        onRetry = { viewModel.retryLoad(userId) },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
                 else -> FriendLocationContent(
                     friend = uiState.friend,
                     location = uiState.location,
-                    onRefresh = { viewModel.loadFriendLocation(userId) }
+                    trackPoints = uiState.trackPoints,
+                    isLive = uiState.isLive
                 )
             }
         }
@@ -105,14 +121,15 @@ fun FriendLocationScreen(
 private fun FriendLocationContent(
     friend: User?,
     location: UserLocation?,
-    onRefresh: () -> Unit
+    trackPoints: List<LatLng>,
+    isLive: Boolean
 ) {
-    val visibleLocation = location?.takeIf { it.latitude != 0.0 || it.longitude != 0.0 }
+    val visibleLocation = location?.takeIf { it.hasSharedCoordinates }
     val hasLocation = visibleLocation != null
     val context = LocalContext.current
     val markerPosition = LatLng(
-        visibleLocation?.latitude ?: 16.778171,
-        visibleLocation?.longitude ?: 96.138039
+        visibleLocation?.latitude ?: DefaultMapCenter.latitude,
+        visibleLocation?.longitude ?: DefaultMapCenter.longitude
     )
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(markerPosition, if (hasLocation) 15f else 11f)
@@ -128,25 +145,32 @@ private fun FriendLocationContent(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-                    properties = MapProperties(
-                        isMyLocationEnabled = true,
-                        isBuildingEnabled = true,
-                        mapType = MapType.NORMAL,
-                        mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.dark_map_type)
-                    ),
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = true,
-            compassEnabled = true,
-            scrollGesturesEnabled = true,
-            tiltGesturesEnabled = true,
-            myLocationButtonEnabled = true
-        ),
+            properties = MapProperties(
+                isMyLocationEnabled = true,
+                isBuildingEnabled = true,
+                mapType = MapType.NORMAL,
+                mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.dark_map_type)
+            ),
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = true,
+                compassEnabled = true,
+                scrollGesturesEnabled = true,
+                tiltGesturesEnabled = true,
+                myLocationButtonEnabled = true
+            ),
         ) {
+            if (trackPoints.size >= 2) {
+                Polyline(
+                    points = trackPoints,
+                    color = Color(0xFF3B82F6),
+                    width = 8f
+                )
+            }
             if (hasLocation) {
                 Marker(
                     state = MarkerState(position = markerPosition),
                     title = friend?.name ?: "Friend",
-                    snippet = "Last shared location"
+                    snippet = "Current location"
                 )
             }
         }
@@ -179,13 +203,17 @@ private fun FriendLocationContent(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (hasLocation) "Last shared location" else "Location not available",
+                            text = when {
+                                hasLocation && isLive -> "Live tracking"
+                                hasLocation -> "Tracking (polling)"
+                                else -> "Location not available"
+                            },
                             color = Color.Gray,
                             fontSize = 13.sp
                         )
                     }
-                    Button(onClick = onRefresh) {
-                        Text("Refresh")
+                    if (hasLocation) {
+                        LiveTrackingBadge(isLive = isLive)
                     }
                 }
 
@@ -206,14 +234,43 @@ private fun FriendLocationContent(
                             fontSize = 12.sp
                         )
                     }
+                    if (trackPoints.size >= 2) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Path: ${trackPoints.size} points",
+                            color = Color(0xFF2563EB),
+                            fontSize = 12.sp
+                        )
+                    }
                 } else {
                     Text(
-                        text = "Ask your friend to start location sharing, then refresh this screen.",
+                        text = "Ask your friend to start location sharing. Updates appear automatically.",
                         color = Color(0xFF4B5563)
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LiveTrackingBadge(isLive: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(
+                    color = if (isLive) Color(0xFF22C55E) else Color(0xFFF59E0B),
+                    shape = CircleShape
+                )
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = if (isLive) "Live" else "Poll",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isLive) Color(0xFF16A34A) else Color(0xFFD97706)
+        )
     }
 }
 

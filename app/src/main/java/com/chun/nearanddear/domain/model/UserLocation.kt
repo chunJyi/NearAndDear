@@ -17,6 +17,9 @@ data class UserLocation(
     @SerialName("updated_at")
     val updatedAt: String? = null
 ) {
+    val hasSharedCoordinates: Boolean
+        get() = latitude != 0.0 || longitude != 0.0
+
     companion object {
         inline fun build(block: Builder.() -> Unit): UserLocation {
             return Builder().apply(block).build()

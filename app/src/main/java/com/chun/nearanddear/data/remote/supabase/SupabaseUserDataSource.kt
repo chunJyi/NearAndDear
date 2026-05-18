@@ -9,7 +9,19 @@ import com.chun.nearanddear.domain.model.FriendState
 import com.chun.nearanddear.domain.model.User
 import com.chun.nearanddear.domain.model.UserLocation
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.HasRecord
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.decodeRecordOrNull
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -104,6 +116,34 @@ class SupabaseUserDataSource @Inject constructor(
         locations.firstOrNull()
     }.onFailure { e ->
         Log.e(TAG, "Failed to load user location: ${e.message}", e)
+    }
+
+    @OptIn(SupabaseExperimental::class)
+    fun observeUserLocation(userId: String): Flow<UserLocation> = callbackFlow {
+        val realtimeChannel = client.channel("friend-location-$userId")
+        val changes = realtimeChannel.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "user_location"
+            filter("user_id", FilterOperator.EQ, userId)
+        }
+
+        val collectJob = launch {
+            realtimeChannel.subscribe(blockUntilSubscribed = true)
+            changes.collect { action ->
+                if (action is HasRecord) {
+                    val location = action.decodeRecordOrNull<UserLocation>()
+                    if (location != null && location.hasSharedCoordinates) {
+                        trySend(location)
+                    }
+                }
+            }
+        }
+
+        awaitClose {
+            collectJob.cancel()
+            launch {
+                client.realtime.removeChannel(realtimeChannel)
+            }
+        }
     }
 
     suspend fun getAcceptedFriends(userId: String): Result<List<FriendModel>> = runCatching {
